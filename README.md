@@ -99,6 +99,18 @@ python3 scripts/dnd_rag_cli.py embed-sample \
   --out storage/embedding-index/core.jsonl
 ```
 
+构建 V1 全量索引：
+
+```bash
+python3 scripts/dnd_rag_cli.py embed-sample \
+  --data-dir data/fvtt-cn-5etools/data \
+  --scope full \
+  --limit 0 \
+  --batch-size 20 \
+  --max-segment-chars 4000 \
+  --out storage/embedding-index/full.jsonl
+```
+
 用真实 embedding 索引跑同一套检索评测：
 
 ```bash
@@ -116,6 +128,16 @@ python3 scripts/dnd_rag_cli.py eval-report \
   --questions eval/golden_v1.json \
   --embedding-index storage/embedding-index/core.jsonl \
   --out docs/evaluations/retrieval-eval-v1-core-embedding.md
+```
+
+全量索引评测归档：
+
+```bash
+python3 scripts/dnd_rag_cli.py eval-report \
+  --data-dir data/fvtt-cn-5etools/data \
+  --questions eval/golden_v1.json \
+  --embedding-index storage/embedding-index/full.jsonl \
+  --out docs/evaluations/retrieval-eval-v1-full-embedding.md
 ```
 
 `storage/` 默认不进入 Git。这里面会保存模型输出向量，也可能间接暴露授权数据的语义内容，只适合本地调试和评测。
