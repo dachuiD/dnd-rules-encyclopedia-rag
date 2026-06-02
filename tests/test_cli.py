@@ -64,6 +64,35 @@ class CliTests(unittest.TestCase):
             self.assertIn("Top1", markdown)
             self.assertNotIn("Top 证据", markdown)
 
+    def test_eval_summary_command_can_compare_against_token_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "eval-summary-compare.md"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/dnd_rag_cli.py",
+                    "eval-summary",
+                    "--data-dir",
+                    "sample_data/5etools",
+                    "--questions",
+                    "eval/golden_sample.json",
+                    "--out",
+                    str(out),
+                    "--compare-baseline",
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            markdown = out.read_text(encoding="utf-8")
+            self.assertIn("Token Hybrid", markdown)
+            self.assertIn("Embedding Hybrid", markdown)
+            self.assertIn("Delta", markdown)
+            self.assertIn("Changed Questions", markdown)
+
 
 if __name__ == "__main__":
     unittest.main()

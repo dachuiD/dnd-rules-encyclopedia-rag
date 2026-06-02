@@ -15,7 +15,12 @@ from dnd_rag.adapters import FiveEToolsCnAdapter
 from dnd_rag.audit import audit_source_tree
 from dnd_rag.chunking import build_chunks
 from dnd_rag.embedding_index import build_embedding_index, filter_fresh_rows, load_embedding_index, text_hash
-from dnd_rag.eval import evaluate_retrieval, render_retrieval_eval_markdown, render_retrieval_eval_summary_markdown
+from dnd_rag.eval import (
+    evaluate_retrieval,
+    render_retrieval_eval_comparison_summary_markdown,
+    render_retrieval_eval_markdown,
+    render_retrieval_eval_summary_markdown,
+)
 from dnd_rag.providers import DashScopeEmbeddingProvider
 from dnd_rag.service import RagService
 from dnd_rag.settings import load_env_file
@@ -56,6 +61,7 @@ def main() -> None:
     eval_summary.add_argument("--out", default="docs/evaluations/retrieval-eval-summary.md")
     eval_summary.add_argument("--embedding-index")
     eval_summary.add_argument("--title", default="Retrieval Eval Summary")
+    eval_summary.add_argument("--compare-baseline", action="store_true")
 
     embed = sub.add_parser("embed-sample", help="Build a small DashScope embedding index")
     embed.add_argument("--data-dir", default="sample_data/5etools")
@@ -120,16 +126,35 @@ def main() -> None:
     elif args.command == "eval-summary":
         adapter = FiveEToolsCnAdapter(Path(args.data_dir))
         questions = json.loads(Path(args.questions).read_text(encoding="utf-8"))
-        service = _service_from_adapter(adapter, embedding_index=Path(args.embedding_index) if args.embedding_index else None)
-        report = evaluate_retrieval(service, questions)
-        markdown = render_retrieval_eval_summary_markdown(
-            report,
-            title=args.title,
-            dataset_path=args.questions,
-            data_dir=args.data_dir,
-            embedding_index=args.embedding_index or "",
-            report_label="Embedding Hybrid" if args.embedding_index else "Token Hybrid",
-        )
+        if args.compare_baseline:
+            baseline_service = _service_from_adapter(adapter)
+            baseline_report = evaluate_retrieval(baseline_service, questions)
+            embedding_service = _service_from_adapter(
+                adapter,
+                embedding_index=Path(args.embedding_index) if args.embedding_index else None,
+            )
+            report = evaluate_retrieval(embedding_service, questions)
+            markdown = render_retrieval_eval_comparison_summary_markdown(
+                baseline_report,
+                report,
+                title=args.title,
+                dataset_path=args.questions,
+                data_dir=args.data_dir,
+                embedding_index=args.embedding_index or "",
+                baseline_label="Token Hybrid",
+                embedding_label="Embedding Hybrid",
+            )
+        else:
+            service = _service_from_adapter(adapter, embedding_index=Path(args.embedding_index) if args.embedding_index else None)
+            report = evaluate_retrieval(service, questions)
+            markdown = render_retrieval_eval_summary_markdown(
+                report,
+                title=args.title,
+                dataset_path=args.questions,
+                data_dir=args.data_dir,
+                embedding_index=args.embedding_index or "",
+                report_label="Embedding Hybrid" if args.embedding_index else "Token Hybrid",
+            )
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(markdown, encoding="utf-8")

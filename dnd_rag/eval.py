@@ -258,6 +258,85 @@ def render_retrieval_eval_summary_markdown(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_retrieval_eval_comparison_summary_markdown(
+    baseline_report: Dict[str, Any],
+    embedding_report: Dict[str, Any],
+    *,
+    title: str = "Retrieval Evaluation Comparison",
+    dataset_path: str = "",
+    data_dir: str = "",
+    embedding_index: str = "",
+    baseline_label: str = "Token Hybrid",
+    embedding_label: str = "Embedding Hybrid",
+) -> str:
+    generated_at = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    top_k = embedding_report.get("top_k", baseline_report.get("top_k", 8))
+    lines = [
+        f"# {title}",
+        "",
+        "## Metadata",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Dataset: `{dataset_path or 'unknown'}`",
+        f"- Data dir: `{data_dir or 'unknown'}`",
+        f"- Embedding index: `{embedding_index or 'not used'}`",
+        "",
+        "## Metrics",
+        "",
+        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
+        "| --- | ---: | ---: | ---: | ---: |",
+        _summary_metric_row(baseline_label, baseline_report),
+        _summary_metric_row(embedding_label, embedding_report),
+        "| Delta | - | {} | {} | {} |".format(
+            _delta_pct(baseline_report.get("recall_at_k"), embedding_report.get("recall_at_k")),
+            _delta_num(baseline_report.get("mrr"), embedding_report.get("mrr")),
+            _delta_num(baseline_report.get("primary_hit_at_1"), embedding_report.get("primary_hit_at_1")),
+        ),
+        "",
+        "## Changed Questions",
+        "",
+        "| ID | 问题 | 变化 | Token Top1 | Embedding Top1 |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    baseline_by_id = {detail.get("id"): detail for detail in baseline_report.get("details", [])}
+    embedding_details = embedding_report.get("details", [])
+    changed_rows = []
+    for detail in embedding_details:
+        baseline = baseline_by_id.get(detail.get("id"))
+        if not baseline:
+            continue
+        change = _question_change_label(baseline, detail)
+        if change == "不变":
+            continue
+        changed_rows.append((detail, baseline, change))
+        lines.append(
+            "| {} | {} | {} | {} | {} |".format(
+                _md(detail.get("id", "")),
+                _md(detail.get("question", "")),
+                change,
+                _md(_top1(baseline)),
+                _md(_top1(detail)),
+            )
+        )
+    if not changed_rows:
+        lines.append("| - | - | 无明显变化 | - | - |")
+
+    lines.extend(["", "## Still Needs Review", ""])
+    review_items = [detail for detail in embedding_details if _needs_review(detail)]
+    if not review_items:
+        lines.append("- 暂无强制复核项。")
+    for detail in review_items:
+        baseline = baseline_by_id.get(detail.get("id"), {})
+        lines.append(
+            "- `{}`：Embedding 仍需复核。Token Top1: {}；Embedding Top1: {}".format(
+                detail.get("id", ""),
+                _top1(baseline),
+                _top1(detail),
+            )
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _single_metrics_table(report: Dict[str, Any], label: str) -> List[str]:
     top_k = report.get("top_k", 8)
     return [
@@ -390,6 +469,57 @@ def _compact_evidence(item: Dict[str, Any]) -> str:
     citation = item.get("citation") or item.get("source_id", "")
     final = scores.get("final", 0)
     return f"{title} ({citation}, {final:.3f})"
+
+
+def _summary_metric_row(label: str, report: Dict[str, Any]) -> str:
+    return "| {} | {} | {} | {} | {} |".format(
+        _md(label),
+        report.get("total", 0),
+        _pct(report.get("recall_at_k")),
+        _num(report.get("mrr")),
+        _metric(report.get("primary_hit_at_1")),
+    )
+
+
+def _delta_pct(before, after) -> str:
+    if before is None or after is None:
+        return "-"
+    return f"{after - before:+.2%}"
+
+
+def _delta_num(before, after) -> str:
+    if before is None or after is None:
+        return "-"
+    return f"{after - before:+.4f}"
+
+
+def _top1(detail: Dict[str, Any]) -> str:
+    evidence = detail.get("top_evidence", [])
+    return _compact_evidence(evidence[0]) if evidence else "-"
+
+
+def _question_change_label(baseline: Dict[str, Any], detail: Dict[str, Any]) -> str:
+    base_primary = baseline.get("primary_hit_at_1")
+    new_primary = detail.get("primary_hit_at_1")
+    if base_primary is False and new_primary is True:
+        return "改善：Top1 命中核心证据"
+    if base_primary is True and new_primary is False:
+        return "退步：Top1 丢失核心证据"
+    base_hit = baseline.get("hit")
+    new_hit = detail.get("hit")
+    if not base_hit and new_hit:
+        return "改善：从未命中到命中"
+    if base_hit and not new_hit:
+        return "退步：从命中到未命中"
+    base_rank = baseline.get("rank")
+    new_rank = detail.get("rank")
+    if base_rank and new_rank and new_rank < base_rank:
+        return f"改善：Rank {base_rank} -> {new_rank}"
+    if base_rank and new_rank and new_rank > base_rank:
+        return f"退步：Rank {base_rank} -> {new_rank}"
+    if _top1(baseline) != _top1(detail):
+        return "变化：Top1 证据不同"
+    return "不变"
 
 
 def _needs_review(detail: Dict[str, Any]) -> bool:

@@ -2,7 +2,12 @@ import unittest
 import json
 from pathlib import Path
 
-from dnd_rag.eval import evaluate_retrieval, render_retrieval_eval_markdown, render_retrieval_eval_summary_markdown
+from dnd_rag.eval import (
+    evaluate_retrieval,
+    render_retrieval_eval_comparison_summary_markdown,
+    render_retrieval_eval_markdown,
+    render_retrieval_eval_summary_markdown,
+)
 from dnd_rag.service import RagService
 
 
@@ -151,6 +156,83 @@ class EvalTests(unittest.TestCase):
         self.assertIn("Top1", markdown)
         self.assertIn("## Needs Review", markdown)
         self.assertNotIn("#### Top 证据", markdown)
+        self.assertNotIn("display_text", markdown)
+
+    def test_retrieval_eval_comparison_summary_shows_embedding_delta(self):
+        baseline = {
+            "total": 2,
+            "top_k": 8,
+            "recall_at_k": 0.5,
+            "mrr": 0.25,
+            "primary_hit_at_1": 0.0,
+            "details": [
+                {
+                    "id": "q1",
+                    "question": "哪个法术能让先攻加骰？",
+                    "reference_answer": "灵敏之赐让先攻加入 1d8。",
+                    "hit": True,
+                    "rank": 4,
+                    "primary_hit_at_1": False,
+                    "top_evidence": [{"title": "激活物品", "citation": "DMG / actions", "score_parts": {"final": 0.7}}],
+                },
+                {
+                    "id": "q2",
+                    "question": "半血裔需要呼吸吗？",
+                    "reference_answer": "不需要呼吸。",
+                    "hit": False,
+                    "rank": None,
+                    "primary_hit_at_1": False,
+                    "top_evidence": [{"title": "吸血鬼", "citation": "MM / bestiary", "score_parts": {"final": 0.8}}],
+                },
+            ],
+        }
+        embedding = {
+            "total": 2,
+            "top_k": 8,
+            "recall_at_k": 1.0,
+            "mrr": 1.0,
+            "primary_hit_at_1": 0.5,
+            "details": [
+                {
+                    "id": "q1",
+                    "question": "哪个法术能让先攻加骰？",
+                    "reference_answer": "灵敏之赐让先攻加入 1d8。",
+                    "hit": True,
+                    "rank": 1,
+                    "primary_hit_at_1": True,
+                    "top_evidence": [{"title": "灵敏之赐", "citation": "EGW / spells", "score_parts": {"final": 0.9}}],
+                },
+                {
+                    "id": "q2",
+                    "question": "半血裔需要呼吸吗？",
+                    "reference_answer": "不需要呼吸。",
+                    "hit": True,
+                    "rank": 6,
+                    "primary_hit_at_1": False,
+                    "top_evidence": [{"title": "吸血鬼", "citation": "MM / bestiary", "score_parts": {"final": 0.8}}],
+                },
+            ],
+        }
+
+        markdown = render_retrieval_eval_comparison_summary_markdown(
+            baseline,
+            embedding,
+            title="Embedding Comparison",
+            dataset_path="eval/golden_full_seed.json",
+            embedding_index="storage/embedding-index/full.jsonl",
+        )
+
+        self.assertIn("# Embedding Comparison", markdown)
+        self.assertIn("Token Hybrid", markdown)
+        self.assertIn("Embedding Hybrid", markdown)
+        self.assertIn("Delta", markdown)
+        self.assertIn("+50.00%", markdown)
+        self.assertIn("## Changed Questions", markdown)
+        self.assertIn("q1", markdown)
+        self.assertIn("改善", markdown)
+        self.assertIn("灵敏之赐", markdown)
+        self.assertIn("## Still Needs Review", markdown)
+        self.assertIn("q2", markdown)
         self.assertNotIn("display_text", markdown)
 
     def test_golden_v1_has_schema_and_question_type_coverage(self):
