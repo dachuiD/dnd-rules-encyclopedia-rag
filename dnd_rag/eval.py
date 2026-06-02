@@ -181,6 +181,83 @@ def render_retrieval_eval_markdown(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_retrieval_eval_summary_markdown(
+    report: Dict[str, Any],
+    *,
+    title: str = "Retrieval Evaluation Summary",
+    dataset_path: str = "",
+    data_dir: str = "",
+    embedding_index: str = "",
+    report_label: str = "Embedding Hybrid",
+) -> str:
+    generated_at = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    top_k = report.get("top_k", 8)
+    details = report.get("details", [])
+    lines = [
+        f"# {title}",
+        "",
+        "## Metadata",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Dataset: `{dataset_path or 'unknown'}`",
+        f"- Data dir: `{data_dir or 'unknown'}`",
+        f"- Embedding index: `{embedding_index or 'not used'}`",
+        "",
+        "## Metrics",
+        "",
+        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
+        "| --- | ---: | ---: | ---: | ---: |",
+        "| {} | {} | {} | {} | {} |".format(
+            _md(report_label),
+            report.get("total", 0),
+            _pct(report.get("recall_at_k")),
+            _num(report.get("mrr")),
+            _metric(report.get("primary_hit_at_1")),
+        ),
+        "",
+        "## Review Table",
+        "",
+        "| ID | 问题 | 参考答案 | Hit | Rank | Primary@1 | Top1 | Top3 |",
+        "| --- | --- | --- | --- | ---: | --- | --- | --- |",
+    ]
+    for detail in details:
+        evidence = detail.get("top_evidence", [])
+        top1 = _compact_evidence(evidence[0]) if evidence else "-"
+        top3 = "<br>".join(_compact_evidence(item) for item in evidence[:3]) if evidence else "-"
+        primary = detail.get("primary_hit_at_1")
+        lines.append(
+            "| {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                _md(detail.get("id", "")),
+                _md(detail.get("question", "")),
+                _md(_truncate(detail.get("reference_answer", ""), 120)),
+                "Y" if detail.get("hit") else "N",
+                detail.get("rank") or "-",
+                "-" if primary is None else ("Y" if primary else "N"),
+                _md(top1),
+                _md(top3),
+            )
+        )
+    lines.extend(["", "## Needs Review", ""])
+    review_items = [detail for detail in details if _needs_review(detail)]
+    if not review_items:
+        lines.append("- 暂无强制复核项。")
+    for detail in review_items:
+        evidence = detail.get("top_evidence", [])
+        top1 = _compact_evidence(evidence[0]) if evidence else "-"
+        reasons = []
+        if not detail.get("hit"):
+            reasons.append("未命中期望证据")
+        if detail.get("primary_hit_at_1") is False:
+            reasons.append("Top1 不是核心证据")
+        rank = detail.get("rank")
+        if rank and rank > 3:
+            reasons.append(f"首个命中排在第 {rank}")
+        lines.append(
+            f"- `{detail.get('id', '')}`：{'；'.join(reasons)}。Top1: {top1}"
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _single_metrics_table(report: Dict[str, Any], label: str) -> List[str]:
     top_k = report.get("top_k", 8)
     return [
@@ -305,6 +382,23 @@ def _interpret_comparison(
     if base_rank and new_rank and new_rank > base_rank:
         return f"解释：`{report_label}` 的首个命中排名从 {base_rank} 下降到 {new_rank}，需要复盘。"
     return "解释：两组检索在该题上的命中状态基本一致，差异主要看 Top 证据排序和噪声。"
+
+
+def _compact_evidence(item: Dict[str, Any]) -> str:
+    scores = item.get("score_parts", {})
+    title = item.get("title") or item.get("document_id", "")
+    citation = item.get("citation") or item.get("source_id", "")
+    final = scores.get("final", 0)
+    return f"{title} ({citation}, {final:.3f})"
+
+
+def _needs_review(detail: Dict[str, Any]) -> bool:
+    if not detail.get("hit"):
+        return True
+    if detail.get("primary_hit_at_1") is False:
+        return True
+    rank = detail.get("rank")
+    return bool(rank and rank > 3)
 
 
 def _join(items) -> str:

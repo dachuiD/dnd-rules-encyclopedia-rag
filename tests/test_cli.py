@@ -36,6 +36,34 @@ class CliTests(unittest.TestCase):
             self.assertIn("core-invisible-attack", markdown)
             self.assertIn("Top 证据", markdown)
 
+    def test_eval_summary_command_writes_compact_review_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "eval-summary.md"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/dnd_rag_cli.py",
+                    "eval-summary",
+                    "--data-dir",
+                    "sample_data/5etools",
+                    "--questions",
+                    "eval/golden_sample.json",
+                    "--out",
+                    str(out),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            markdown = out.read_text(encoding="utf-8")
+            self.assertIn("Retrieval Eval Summary", markdown)
+            self.assertIn("Review Table", markdown)
+            self.assertIn("Top1", markdown)
+            self.assertNotIn("Top 证据", markdown)
+
 
 if __name__ == "__main__":
     unittest.main()
