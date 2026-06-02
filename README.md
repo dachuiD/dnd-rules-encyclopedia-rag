@@ -77,6 +77,26 @@ python3 scripts/dnd_rag_cli.py ask "隐身的人攻击有优势吗？" --scope c
 python3 scripts/dnd_rag_cli.py eval --questions eval/golden_sample.json --out reports/retrieval-eval.json
 ```
 
+构建百炼真实 embedding 小样本索引：
+
+```bash
+python3 scripts/dnd_rag_cli.py embed-sample \
+  --limit 300 \
+  --batch-size 32 \
+  --out storage/embedding-index/sample.jsonl
+```
+
+用真实 embedding 索引跑同一套检索评测：
+
+```bash
+python3 scripts/dnd_rag_cli.py eval \
+  --questions eval/golden_sample.json \
+  --embedding-index storage/embedding-index/sample.jsonl \
+  --out reports/retrieval-eval-embedding.json
+```
+
+`storage/` 默认不进入 Git。这里面会保存模型输出向量，也可能间接暴露授权数据的语义内容，只适合本地调试和评测。
+
 ## 数据边界
 
 V1 的两个检索范围：
@@ -114,6 +134,18 @@ DASHSCOPE_EMBEDDING_DIMENSIONS=1024
 当前 Web Demo 默认不强制调用外部模型；生产接入时可把 `DeepSeekLLMProvider` 和 `DashScopeEmbeddingProvider` 接入索引构建与回答生成链路。
 
 建议先用 `DASHSCOPE_EMBEDDING_DIMENSIONS=1024` 建 200-500 个 chunk 的小样本索引，跑检索评测后再对比 2048 维度。这样简历里可以讲清楚“性能、成本、召回质量”的取舍，而不是盲目上最大配置。
+
+## Embedding 小样本闭环
+
+当前已经支持一个轻量但真实的 embedding 闭环：
+
+```text
+Adapter -> Normalize -> Chunk -> DashScope text-embedding-v4 -> JSONL Index -> Hybrid Retrieval -> Eval
+```
+
+本地索引每行保存 `chunk_id`、`document_id`、模型名、维度、`embedding_text` 的 hash 和向量。检索时会重新从数据源构建 chunk，并用 hash 判断缓存是否仍然可用；如果文本、模型或维度变了，旧向量不会被静默复用。
+
+这个设计暂时不替代 pgvector，而是作为小样本验证层：先用 200-500 个 chunk 对比 baseline 与真实 embedding，再决定是否全量建索引和迁移到 Postgres。
 
 ## Git 与安全
 

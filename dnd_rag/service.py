@@ -6,6 +6,7 @@ from typing import Dict, List
 from .adapters import FiveEToolsCnAdapter
 from .chunking import build_chunks
 from .models import RuleChunk, RuleDocument, SearchResult, SearchScope
+from .providers import EmbeddingProvider
 from .retrieval import HybridRetriever
 
 
@@ -22,11 +23,21 @@ class AskResponse:
 
 
 class RagService:
-    def __init__(self, documents: List[RuleDocument], chunks: List[RuleChunk]) -> None:
+    def __init__(
+        self,
+        documents: List[RuleDocument],
+        chunks: List[RuleChunk],
+        chunk_embeddings: Dict[str, List[float]] | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
+    ) -> None:
         self.documents = documents
         self.chunks = chunks
         self.documents_by_id = {doc.id: doc for doc in documents}
-        self.retriever = HybridRetriever(chunks)
+        self.retriever = HybridRetriever(
+            chunks,
+            chunk_embeddings=chunk_embeddings,
+            embedding_provider=embedding_provider,
+        )
 
     @classmethod
     def from_adapter(cls, adapter: FiveEToolsCnAdapter) -> "RagService":

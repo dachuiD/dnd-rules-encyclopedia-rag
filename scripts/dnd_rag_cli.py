@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -12,7 +13,10 @@ if str(ROOT) not in sys.path:
 
 from dnd_rag.adapters import FiveEToolsCnAdapter
 from dnd_rag.audit import audit_source_tree
+from dnd_rag.chunking import build_chunks
+from dnd_rag.embedding_index import build_embedding_index, filter_fresh_rows, load_embedding_index, text_hash
 from dnd_rag.eval import evaluate_retrieval
+from dnd_rag.providers import DashScopeEmbeddingProvider
 from dnd_rag.service import RagService
 from dnd_rag.settings import load_env_file
 
@@ -36,6 +40,15 @@ def main() -> None:
     evaluate.add_argument("--data-dir", default="sample_data/5etools")
     evaluate.add_argument("--questions", default="eval/golden_sample.json")
     evaluate.add_argument("--out", default="reports/retrieval-eval.json")
+    evaluate.add_argument("--embedding-index")
+
+    embed = sub.add_parser("embed-sample", help="Build a small DashScope embedding index")
+    embed.add_argument("--data-dir", default="sample_data/5etools")
+    embed.add_argument("--out", default="storage/embedding-index/sample.jsonl")
+    embed.add_argument("--limit", type=int, default=300)
+    embed.add_argument("--batch-size", type=int, default=32)
+    embed.add_argument("--model", default=os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v4"))
+    embed.add_argument("--dimensions", type=int, default=int(os.getenv("DASHSCOPE_EMBEDDING_DIMENSIONS", "1024")))
 
     args = parser.parse_args()
     if args.command == "audit":
@@ -52,13 +65,46 @@ def main() -> None:
         for citation in response.citations:
             print(f"- {citation['label']} ({citation['score']})")
     elif args.command == "eval":
-        service = RagService.from_adapter(FiveEToolsCnAdapter(Path(args.data_dir)))
+        adapter = FiveEToolsCnAdapter(Path(args.data_dir))
+        service = _service_from_adapter(adapter, embedding_index=Path(args.embedding_index) if args.embedding_index else None)
         questions = json.loads(Path(args.questions).read_text(encoding="utf-8"))
         report = evaluate_retrieval(service, questions)
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Wrote {out}")
+    elif args.command == "embed-sample":
+        adapter = FiveEToolsCnAdapter(Path(args.data_dir))
+        documents = adapter.load_documents()
+        chunks = [chunk for doc in documents for chunk in build_chunks(doc)]
+        provider = DashScopeEmbeddingProvider(model=args.model, dimensions=args.dimensions)
+        report = build_embedding_index(
+            chunks,
+            provider=provider,
+            out_path=Path(args.out),
+            limit=args.limit,
+            batch_size=args.batch_size,
+            model=provider.model,
+            dimensions=provider.dimensions,
+        )
+        print(json.dumps(report.__dict__, ensure_ascii=False, indent=2))
+
+
+def _service_from_adapter(adapter: FiveEToolsCnAdapter, embedding_index: Path | None = None) -> RagService:
+    documents = adapter.load_documents()
+    chunks = [chunk for doc in documents for chunk in build_chunks(doc)]
+    if not embedding_index:
+        return RagService(documents, chunks)
+    rows = load_embedding_index(embedding_index)
+    if not rows:
+        return RagService(documents, chunks)
+    model = rows[0].model
+    dimensions = rows[0].dimensions
+    expected_hashes = {chunk.id: text_hash(chunk.embedding_text) for chunk in chunks}
+    fresh_rows = filter_fresh_rows(rows, expected_hashes, model=model, dimensions=dimensions)
+    chunk_embeddings = {chunk_id: row.embedding for chunk_id, row in fresh_rows.items()}
+    provider = DashScopeEmbeddingProvider(model=model, dimensions=dimensions)
+    return RagService(documents, chunks, chunk_embeddings=chunk_embeddings, embedding_provider=provider)
 
 
 if __name__ == "__main__":

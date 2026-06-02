@@ -7,6 +7,7 @@ from dataclasses import replace
 from typing import Dict, Iterable, List, Sequence, Set
 
 from .models import CORE_SOURCES, EvidenceScore, RuleChunk, SearchResult, SearchScope
+from .providers import EmbeddingProvider
 
 
 DEFAULT_ALIASES = {
@@ -46,9 +47,17 @@ FULL_WEIGHTS = {
 
 
 class HybridRetriever:
-    def __init__(self, chunks: Sequence[RuleChunk], aliases: Dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        chunks: Sequence[RuleChunk],
+        aliases: Dict[str, str] | None = None,
+        chunk_embeddings: Dict[str, List[float]] | None = None,
+        embedding_provider: EmbeddingProvider | None = None,
+    ) -> None:
         self.chunks = list(chunks)
         self.aliases = {**DEFAULT_ALIASES, **(aliases or {})}
+        self.chunk_embeddings = chunk_embeddings or {}
+        self.embedding_provider = embedding_provider
         self.doc_children = defaultdict(list)
         for chunk in self.chunks:
             if chunk.parent_chunk_id:
@@ -60,8 +69,12 @@ class HybridRetriever:
         query_tokens = _tokens(normalized_query)
         dense_raw = {}
         lexical_raw = {}
+        query_embedding = self._embed_query(normalized_query)
         for chunk in scoped:
-            dense_raw[chunk.id] = _jaccard(query_tokens, _tokens(chunk.embedding_text))
+            if query_embedding is not None and chunk.id in self.chunk_embeddings:
+                dense_raw[chunk.id] = _cosine(query_embedding, self.chunk_embeddings[chunk.id])
+            else:
+                dense_raw[chunk.id] = _jaccard(query_tokens, _tokens(chunk.embedding_text))
             lexical_raw[chunk.id] = _lexical_overlap(query_tokens, _tokens(chunk.text + " " + " ".join(chunk.aliases)))
 
         dense_scores = _normalize_scores(dense_raw)
@@ -173,6 +186,12 @@ class HybridRetriever:
         expanded.sort(key=lambda item: item.score.final_score, reverse=True)
         return expanded
 
+    def _embed_query(self, query: str) -> List[float] | None:
+        if not self.embedding_provider or not self.chunk_embeddings:
+            return None
+        vectors = self.embedding_provider.embed([query])
+        return vectors[0] if vectors else None
+
 
 def _tokens(text: str) -> Counter:
     lower = text.lower()
@@ -204,3 +223,15 @@ def _normalize_scores(scores: Dict[str, float]) -> Dict[str, float]:
     if max_score <= 0:
         return {key: 0.0 for key in scores}
     return {key: value / max_score for key, value in scores.items()}
+
+
+def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
+    size = min(len(left), len(right))
+    if size == 0:
+        return 0.0
+    dot = sum(left[index] * right[index] for index in range(size))
+    left_norm = math.sqrt(sum(value * value for value in left[:size]))
+    right_norm = math.sqrt(sum(value * value for value in right[:size]))
+    if left_norm == 0 or right_norm == 0:
+        return 0.0
+    return max(0.0, dot / (left_norm * right_norm))
