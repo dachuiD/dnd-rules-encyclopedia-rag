@@ -6,6 +6,8 @@ from typing import Any, Dict, Iterable, List
 def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int = 8) -> Dict[str, Any]:
     total = 0
     hits = 0
+    primary_questions = 0
+    primary_hits = 0
     reciprocal_rank_sum = 0.0
     details: List[Dict[str, Any]] = []
     for item in questions:
@@ -15,8 +17,14 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
         response = service.ask(question, scope=scope)
         expected_docs = set(item.get("expected_documents") or [])
         expected_terms = set(item.get("expected_terms") or [])
+        expected_primary_terms = set(item.get("expected_primary_terms") or [])
         rank = _first_match_rank(response.evidence[:top_k], expected_docs, expected_terms)
         hit = rank is not None
+        primary_hit = _top_result_matches(response.evidence[:1], expected_primary_terms)
+        if expected_primary_terms:
+            primary_questions += 1
+            if primary_hit:
+                primary_hits += 1
         if hit:
             hits += 1
             reciprocal_rank_sum += 1.0 / rank
@@ -26,6 +34,7 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
                 "question": question,
                 "hit": hit,
                 "rank": rank,
+                "primary_hit_at_1": primary_hit if expected_primary_terms else None,
                 "top_titles": [result.chunk.citation.title for result in response.evidence[:top_k]],
             }
         )
@@ -33,6 +42,7 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
         "total": total,
         "recall_at_k": hits / total if total else 0.0,
         "mrr": reciprocal_rank_sum / total if total else 0.0,
+        "primary_hit_at_1": primary_hits / primary_questions if primary_questions else None,
         "details": details,
     }
 
@@ -53,3 +63,17 @@ def _first_match_rank(results, expected_docs: set, expected_terms: set) -> int |
             return idx
     return None
 
+
+def _top_result_matches(results, expected_terms: set) -> bool:
+    if not results or not expected_terms:
+        return False
+    top = results[0]
+    haystack = " ".join(
+        [
+            top.chunk.document_id,
+            top.chunk.citation.title or "",
+            top.chunk.text,
+            top.chunk.embedding_text,
+        ]
+    )
+    return any(term in haystack for term in expected_terms)
