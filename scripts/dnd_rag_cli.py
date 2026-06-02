@@ -46,7 +46,7 @@ def main() -> None:
     embed.add_argument("--data-dir", default="sample_data/5etools")
     embed.add_argument("--out", default="storage/embedding-index/sample.jsonl")
     embed.add_argument("--limit", type=int, default=300)
-    embed.add_argument("--batch-size", type=int, default=32)
+    embed.add_argument("--batch-size", type=int, default=10)
     embed.add_argument("--model", default=os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v4"))
     embed.add_argument("--dimensions", type=int, default=int(os.getenv("DASHSCOPE_EMBEDDING_DIMENSIONS", "1024")))
 

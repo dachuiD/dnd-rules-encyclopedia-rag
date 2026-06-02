@@ -82,7 +82,7 @@ python3 scripts/dnd_rag_cli.py eval --questions eval/golden_sample.json --out re
 ```bash
 python3 scripts/dnd_rag_cli.py embed-sample \
   --limit 300 \
-  --batch-size 32 \
+  --batch-size 10 \
   --out storage/embedding-index/sample.jsonl
 ```
 

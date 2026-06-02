@@ -86,7 +86,7 @@ def build_embedding_index(
     provider: EmbeddingProvider,
     out_path: Path,
     limit: int = 300,
-    batch_size: int = 32,
+    batch_size: int = 10,
     model: str = "text-embedding-v4",
     dimensions: int = 1024,
 ) -> EmbeddingIndexBuildReport:

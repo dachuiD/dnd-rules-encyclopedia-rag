@@ -79,11 +79,14 @@ class EmbeddingIndexPersistenceTests(unittest.TestCase):
 
 
 class FakeEmbeddingProvider:
-    def __init__(self, embeddings: dict[str, list[float]]) -> None:
+    def __init__(self, embeddings: dict[str, list[float]], max_batch_size: int | None = None) -> None:
         self.embeddings = embeddings
+        self.max_batch_size = max_batch_size
         self.calls: list[list[str]] = []
 
     def embed(self, texts: list[str]) -> list[list[float]]:
+        if self.max_batch_size is not None and len(texts) > self.max_batch_size:
+            raise ValueError("batch too large")
         self.calls.append(texts)
         return [self.embeddings[text] for text in texts]
 
@@ -181,6 +184,40 @@ class EmbeddingIndexBuildTests(unittest.TestCase):
         self.assertEqual(report.total_rows, 2)
         self.assertEqual(provider.calls, [[chunks[1].embedding_text]])
         self.assertEqual({row.chunk_id for row in rows}, {chunk.id for chunk in chunks})
+
+    def test_build_embedding_index_default_batch_size_stays_dashscope_safe(self):
+        normalizer = FiveEToolsNormalizer()
+        chunks = []
+        embeddings = {}
+        for index in range(11):
+            doc = normalizer.normalize_entry(
+                {
+                    "name": f"测试条目{index}",
+                    "ENG_name": f"Test {index}",
+                    "source": "PHB",
+                    "page": index + 1,
+                    "entries": [f"第{index}条测试规则。"],
+                },
+                "variantrules",
+            )
+            chunk = build_chunks(doc)[0]
+            chunks.append(chunk)
+            embeddings[chunk.embedding_text] = [float(index), 1.0]
+        provider = FakeEmbeddingProvider(embeddings, max_batch_size=10)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "index.jsonl"
+
+            report = build_embedding_index(
+                chunks,
+                provider=provider,
+                out_path=path,
+                limit=11,
+                model="text-embedding-v4",
+                dimensions=2,
+            )
+
+        self.assertEqual(report.embedded_rows, 11)
+        self.assertEqual([len(call) for call in provider.calls], [10, 1])
 
 
 if __name__ == "__main__":
