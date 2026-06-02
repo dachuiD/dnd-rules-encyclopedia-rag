@@ -15,7 +15,7 @@ from dnd_rag.adapters import FiveEToolsCnAdapter
 from dnd_rag.audit import audit_source_tree
 from dnd_rag.chunking import build_chunks
 from dnd_rag.embedding_index import build_embedding_index, filter_fresh_rows, load_embedding_index, text_hash
-from dnd_rag.eval import evaluate_retrieval
+from dnd_rag.eval import evaluate_retrieval, render_retrieval_eval_markdown
 from dnd_rag.providers import DashScopeEmbeddingProvider
 from dnd_rag.service import RagService
 from dnd_rag.settings import load_env_file
@@ -41,6 +41,14 @@ def main() -> None:
     evaluate.add_argument("--questions", default="eval/golden_sample.json")
     evaluate.add_argument("--out", default="reports/retrieval-eval.json")
     evaluate.add_argument("--embedding-index")
+
+    eval_report = sub.add_parser("eval-report", help="Run retrieval eval and write an auditable Markdown report")
+    eval_report.add_argument("--data-dir", default="sample_data/5etools")
+    eval_report.add_argument("--questions", default="eval/golden_sample.json")
+    eval_report.add_argument("--out", default="docs/evaluations/retrieval-eval.md")
+    eval_report.add_argument("--embedding-index")
+    eval_report.add_argument("--title", default="Retrieval Eval")
+    eval_report.add_argument("--evidence-limit", type=int, default=3)
 
     embed = sub.add_parser("embed-sample", help="Build a small DashScope embedding index")
     embed.add_argument("--data-dir", default="sample_data/5etools")
@@ -74,6 +82,33 @@ def main() -> None:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"Wrote {out}")
+    elif args.command == "eval-report":
+        adapter = FiveEToolsCnAdapter(Path(args.data_dir))
+        questions = json.loads(Path(args.questions).read_text(encoding="utf-8"))
+        if args.embedding_index:
+            baseline_service = _service_from_adapter(adapter)
+            baseline_report = evaluate_retrieval(baseline_service, questions)
+            embedding_service = _service_from_adapter(adapter, embedding_index=Path(args.embedding_index))
+            report = evaluate_retrieval(embedding_service, questions)
+        else:
+            baseline_report = None
+            service = _service_from_adapter(adapter)
+            report = evaluate_retrieval(service, questions)
+        markdown = render_retrieval_eval_markdown(
+            report,
+            title=args.title,
+            dataset_path=args.questions,
+            data_dir=args.data_dir,
+            embedding_index=args.embedding_index or "",
+            baseline_report=baseline_report,
+            baseline_label="Token Hybrid",
+            report_label="Embedding Hybrid",
+            evidence_limit=args.evidence_limit,
+        )
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(markdown, encoding="utf-8")
         print(f"Wrote {out}")
     elif args.command == "embed-sample":
         adapter = FiveEToolsCnAdapter(Path(args.data_dir))

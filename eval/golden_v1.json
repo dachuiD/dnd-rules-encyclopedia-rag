@@ -2,6 +2,7 @@
   {
     "id": "core-invisible-attack-advantage",
     "question_zh": "隐身的人攻击有优势吗？",
+    "reference_answer": "通常有优势。隐形生物进行攻击检定时具有优势，但这不等于自动命中，仍要正常掷攻击检定。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -16,6 +17,7 @@
   {
     "id": "core-invisible-target-disadvantage",
     "question_zh": "打一个看不见的目标是不是有劣势？",
+    "reference_answer": "通常有劣势。攻击者无法看见目标时，针对该目标的攻击检定具有劣势。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -30,6 +32,7 @@
   {
     "id": "core-invisible-detection-condition",
     "question_zh": "隐形是不是任何情况下都完全发现不了？",
+    "reference_answer": "不是。隐形状态说明目标无法在没有魔法或特殊感官帮助下被看见，但声音、踪迹、特殊感官或魔法仍可能让位置被发现或被推断。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -44,6 +47,7 @@
   {
     "id": "core-blinded-visual-check",
     "question_zh": "目盲以后需要靠视觉的检定会怎样？",
+    "reference_answer": "目盲生物无法看见，任何需要视觉的能力检定会自动失败。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -58,6 +62,7 @@
   {
     "id": "core-blinded-attack-disadvantage",
     "question_zh": "瞎了以后自己攻击别人有不利吗？",
+    "reference_answer": "有。目盲生物自己的攻击检定具有劣势。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -72,6 +77,7 @@
   {
     "id": "core-blinded-target-advantage",
     "question_zh": "攻击目盲生物会不会更容易？",
+    "reference_answer": "会。针对目盲生物的攻击检定具有优势，但不是自动命中。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -86,6 +92,7 @@
   {
     "id": "core-invisible-vs-blinded-attack",
     "question_zh": "隐形和目盲对攻击检定的影响有什么区别？",
+    "reference_answer": "两者都会影响攻击检定，但角度不同：隐形主要让隐形者攻击有优势、别人攻击它有劣势；目盲则让目盲者攻击有劣势、别人攻击目盲者有优势。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -100,6 +107,7 @@
   {
     "id": "core-opportunity-attack-trigger",
     "question_zh": "机会攻击到底什么时候触发？",
+    "reference_answer": "借机攻击通常在敌对生物离开你的触及范围时触发，你可以用反应进行一次近战攻击。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -114,6 +122,7 @@
   {
     "id": "core-opportunity-attack-disengage",
     "question_zh": "敌人撤离以后还会吃借机攻击吗？",
+    "reference_answer": "通常不会。采取撤离动作后，移动不会触发借机攻击。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -128,6 +137,7 @@
   {
     "id": "core-opportunity-attack-reaction",
     "question_zh": "借机攻击消耗什么行动资源？",
+    "reference_answer": "借机攻击消耗反应，不是动作或附赠动作。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -142,6 +152,7 @@
   {
     "id": "core-concentration-damage-save",
     "question_zh": "维持法术的时候被打了要做什么检定？",
+    "reference_answer": "维持专注时受到伤害，通常要进行体质豁免来维持专注。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -156,6 +167,7 @@
   {
     "id": "core-concentration-not-auto-break",
     "question_zh": "法师挨打后专注会立刻断吗？",
+    "reference_answer": "不会因为受到伤害就自动中断。通常需要进行体质豁免，失败才失去专注。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -170,6 +182,7 @@
   {
     "id": "core-concentration-purpose",
     "question_zh": "专注规则是用来维持什么的？",
+    "reference_answer": "专注用于维持某些魔法效应，通常是持续时间标有专注的法术或效果。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -184,6 +197,7 @@
   {
     "id": "core-fireball-save",
     "question_zh": "火球术让目标做什么豁免？",
+    "reference_answer": "火球术要求影响范围内目标进行敏捷豁免。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -198,6 +212,7 @@
   {
     "id": "core-fireball-damage",
     "question_zh": "火球术豁免失败会受到多少火焰伤害？",
+    "reference_answer": "豁免失败时通常受到 8d6 火焰伤害；豁免成功通常承受一半伤害。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -212,6 +227,7 @@
   {
     "id": "core-fireball-upcast",
     "question_zh": "火球术升环以后伤害怎么增加？",
+    "reference_answer": "使用 4 环或更高法术位施放火球术时，每高于 3 环一环，伤害增加 1d6。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -226,6 +242,7 @@
   {
     "id": "core-silence-verbal-spell",
     "question_zh": "沉默术范围里还能施展有言语成分的法术吗？",
+    "reference_answer": "通常不能。在沉默术区域内，施展带有言语成分的法术是不可能的。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -240,6 +257,7 @@
   {
     "id": "core-silence-thunder-immunity",
     "question_zh": "沉默术区域内的生物对哪种伤害免疫？",
+    "reference_answer": "在沉默术区域内的生物对雷鸣伤害免疫。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -254,6 +272,7 @@
   {
     "id": "core-silence-sound-blocking",
     "question_zh": "沉默术会不会阻止声音穿过区域？",
+    "reference_answer": "会。沉默术区域内无法产生声音，声音也不能穿过该区域。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "core",
@@ -268,6 +287,7 @@
   {
     "id": "full-expanded-reactions",
     "question_zh": "全量资料里有没有额外的反应选项资料？",
+    "reference_answer": "全量资料可以包含核心规则之外的扩展反应选项；核心规则模式不应把它当作核心规则限定内容。",
     "source_language": "ai_generated",
     "provenance": "ai_generated_from_gold_evidence",
     "scope": "full",
