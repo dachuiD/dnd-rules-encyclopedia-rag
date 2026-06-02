@@ -45,8 +45,10 @@ def main() -> None:
     embed = sub.add_parser("embed-sample", help="Build a small DashScope embedding index")
     embed.add_argument("--data-dir", default="sample_data/5etools")
     embed.add_argument("--out", default="storage/embedding-index/sample.jsonl")
+    embed.add_argument("--scope", choices=["core", "full"], default="core")
     embed.add_argument("--limit", type=int, default=300)
-    embed.add_argument("--batch-size", type=int, default=10)
+    embed.add_argument("--batch-size", type=int, default=20)
+    embed.add_argument("--max-segment-chars", type=int, default=4000)
     embed.add_argument("--model", default=os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v4"))
     embed.add_argument("--dimensions", type=int, default=int(os.getenv("DASHSCOPE_EMBEDDING_DIMENSIONS", "1024")))
 
@@ -77,6 +79,7 @@ def main() -> None:
         adapter = FiveEToolsCnAdapter(Path(args.data_dir))
         documents = adapter.load_documents()
         chunks = [chunk for doc in documents for chunk in build_chunks(doc)]
+        chunks = _filter_chunks_for_scope(chunks, args.scope)
         provider = DashScopeEmbeddingProvider(model=args.model, dimensions=args.dimensions)
         report = build_embedding_index(
             chunks,
@@ -86,6 +89,7 @@ def main() -> None:
             batch_size=args.batch_size,
             model=provider.model,
             dimensions=provider.dimensions,
+            max_segment_chars=args.max_segment_chars,
         )
         print(json.dumps(report.__dict__, ensure_ascii=False, indent=2))
 
@@ -105,6 +109,12 @@ def _service_from_adapter(adapter: FiveEToolsCnAdapter, embedding_index: Path | 
     chunk_embeddings = {chunk_id: row.embedding for chunk_id, row in fresh_rows.items()}
     provider = DashScopeEmbeddingProvider(model=model, dimensions=dimensions)
     return RagService(documents, chunks, chunk_embeddings=chunk_embeddings, embedding_provider=provider)
+
+
+def _filter_chunks_for_scope(chunks, scope: str):
+    if scope == "core":
+        return [chunk for chunk in chunks if chunk.search_scope == "core"]
+    return chunks
 
 
 if __name__ == "__main__":

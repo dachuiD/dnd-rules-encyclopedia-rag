@@ -81,9 +81,22 @@ python3 scripts/dnd_rag_cli.py eval --questions eval/golden_sample.json --out re
 
 ```bash
 python3 scripts/dnd_rag_cli.py embed-sample \
+  --scope core \
   --limit 300 \
-  --batch-size 10 \
+  --batch-size 20 \
   --out storage/embedding-index/sample.jsonl
+```
+
+`--limit 0` 表示不限制数量，可用于构建完整核心规则索引：
+
+```bash
+python3 scripts/dnd_rag_cli.py embed-sample \
+  --data-dir data/fvtt-cn-5etools/data \
+  --scope core \
+  --limit 0 \
+  --batch-size 20 \
+  --max-segment-chars 4000 \
+  --out storage/embedding-index/core.jsonl
 ```
 
 用真实 embedding 索引跑同一套检索评测：
@@ -145,7 +158,9 @@ Adapter -> Normalize -> Chunk -> DashScope text-embedding-v4 -> JSONL Index -> H
 
 本地索引每行保存 `chunk_id`、`document_id`、模型名、维度、`embedding_text` 的 hash 和向量。检索时会重新从数据源构建 chunk，并用 hash 判断缓存是否仍然可用；如果文本、模型或维度变了，旧向量不会被静默复用。
 
-这个设计暂时不替代 pgvector，而是作为小样本验证层：先用 200-500 个 chunk 对比 baseline 与真实 embedding，再决定是否全量建索引和迁移到 Postgres。
+超长 chunk 不会被跳过或截断。索引构建会按 `--max-segment-chars` 二次切分，分别 embedding 后做向量平均，最终仍保存为原 chunk 的一条索引记录。批量请求默认从 `20` 开始，如果供应商接口拒绝大批量，会自动二分降级为更小批次。
+
+这个设计暂时不替代 pgvector，而是作为验证层：先用核心规则索引对比 baseline 与真实 embedding，再决定是否全量建索引和迁移到 Postgres。
 
 ## Git 与安全
 
