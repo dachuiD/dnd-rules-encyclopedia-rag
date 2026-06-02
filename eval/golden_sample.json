@@ -1,0 +1,41 @@
+[
+  {
+    "id": "core-invisible-attack",
+    "question_zh": "隐身的人攻击有优势吗？",
+    "source_language": "ai_generated",
+    "provenance": "ai_generated_from_gold_evidence",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": ["隐形", "优势", "攻击检定"],
+    "must_include": ["优势", "攻击检定"],
+    "must_not_include": ["自动命中"],
+    "difficulty": "easy",
+    "question_type": "ruling"
+  },
+  {
+    "id": "core-opportunity-attack",
+    "question_zh": "机会攻击怎么触发？",
+    "source_language": "ai_generated",
+    "provenance": "ai_generated_from_gold_evidence",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": ["借机攻击", "反应", "触及范围"],
+    "must_include": ["反应", "触及范围"],
+    "must_not_include": ["附赠动作"],
+    "difficulty": "easy",
+    "question_type": "lookup"
+  },
+  {
+    "id": "core-concentration",
+    "question_zh": "法师被打了专注会不会立刻断？",
+    "source_language": "ai_generated",
+    "provenance": "ai_generated_from_gold_evidence",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": ["专注", "体质豁免"],
+    "must_include": ["体质豁免"],
+    "must_not_include": ["立刻中断"],
+    "difficulty": "medium",
+    "question_type": "ruling"
+  }
+]

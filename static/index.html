@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D&D 规则百科 RAG</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">D&D Rules Encyclopedia RAG</p>
+          <h1>规则裁定与百科检索</h1>
+        </div>
+      </header>
+
+      <section class="query-panel">
+        <form id="askForm" class="ask">
+          <div class="query-head">
+            <label for="question">输入一个具体规则问题</label>
+            <div class="mode" role="group" aria-label="检索范围">
+              <button id="coreBtn" class="active" type="button">
+                <span>核心规则</span>
+                <small>PHB / DMG / MM</small>
+              </button>
+              <button id="fullBtn" type="button">
+                <span>全量</span>
+                <small>含拓展资料</small>
+              </button>
+            </div>
+          </div>
+          <div class="ask-row">
+            <textarea id="question" rows="2" placeholder="例如：隐身的人攻击有优势吗？"></textarea>
+            <button type="submit">判定</button>
+          </div>
+        </form>
+        <div class="examples" aria-label="示例问题">
+          <button type="button" data-example="隐身的人攻击有优势吗？">隐身攻击有优势吗</button>
+          <button type="button" data-example="法师被打了专注会不会立刻断？">专注会不会立刻断</button>
+          <button type="button" data-example="机会攻击怎么触发？">机会攻击怎么触发</button>
+        </div>
+      </section>
+
+      <section class="layout">
+        <section class="main-column">
+          <article class="verdict-card">
+            <div class="card-label">判定</div>
+            <p id="directAnswer" class="verdict">提出问题后，这里会先给出直接结论。</p>
+            <div id="modeNote" class="mode-note">核心规则模式会优先给出可落桌的规则裁定。</div>
+          </article>
+
+          <article class="support-card">
+            <div class="section-head">
+              <h2>为什么这么判</h2>
+              <span id="citationCount">0 条引用</span>
+            </div>
+            <ol id="supportingPoints" class="support-list"></ol>
+          </article>
+
+          <article class="support-card">
+            <div class="section-head">
+              <h2>注意条件</h2>
+              <span>避免误判</span>
+            </div>
+            <ul id="caveats" class="caveat-list"></ul>
+          </article>
+
+          <article class="source-card">
+            <div class="section-head">
+              <h2>引用来源</h2>
+              <span>可追溯证据</span>
+            </div>
+            <div id="citations" class="citation-list empty">等待检索结果。</div>
+          </article>
+        </section>
+
+        <aside class="side-column">
+          <section class="side-card">
+            <div class="section-head">
+              <h2>相关百科</h2>
+              <span>继续探索</span>
+            </div>
+            <div id="entries" class="entry-list empty">相关条目会出现在这里。</div>
+          </section>
+
+          <section class="side-card entry-detail-card">
+            <div class="section-head">
+              <h2>条目详情</h2>
+              <span>点击来源或百科</span>
+            </div>
+            <div id="entryDetail" class="entry-detail empty">选择一个来源或百科条目查看完整信息。</div>
+          </section>
+
+          <details class="side-card debug">
+            <summary>
+              <span>检索解释</span>
+              <small>召回与打分</small>
+            </summary>
+            <div id="evidence" class="evidence-list"></div>
+          </details>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

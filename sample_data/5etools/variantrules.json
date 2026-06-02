@@ -1,0 +1,23 @@
+{
+  "variantrule": [
+    {
+      "name": "专注",
+      "ENG_name": "Concentration",
+      "source": "PHB",
+      "page": 203,
+      "entries": [
+        "某些法术要求你维持专注以保持其魔法效应。",
+        "如果你在专注时受到伤害，必须进行一次体质豁免以维持专注。"
+      ]
+    },
+    {
+      "name": "扩展反应选项",
+      "ENG_name": "Expanded Reactions",
+      "source": "XGE",
+      "page": 12,
+      "entries": [
+        "这是一段拓展资料，描述额外的反应选项。"
+      ]
+    }
+  ]
+}
