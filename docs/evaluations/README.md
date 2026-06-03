@@ -7,6 +7,8 @@ Use it for:
 - Golden-set summaries with concrete questions and reference answers.
 - Retrieval evidence tables with citation labels, chunk metadata, score parts, and match reasons.
 - Baseline versus embedding comparisons that show improvements, regressions, and misses.
+- Strict evidence metrics such as `StrictDoc@K`, used to separate loose term hits from true gold-document hits.
+- Notes about LLM memory contamination controls for answer-quality evaluation.
 
 Do not use it for:
 

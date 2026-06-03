@@ -49,6 +49,27 @@ class EvalTests(unittest.TestCase):
         self.assertIn(report["primary_hit_at_1"], {0.0, 1.0})
         self.assertIn("primary_hit_at_1", report["details"][0])
 
+    def test_retrieval_eval_reports_strict_document_metrics_separately(self):
+        service = RagService.from_sample_data()
+        questions = [
+            {
+                "id": "q1",
+                "question_zh": "隐身攻击是否有优势？",
+                "scope": "core",
+                "expected_terms": ["隐形"],
+                "expected_documents": ["missing.document"],
+            }
+        ]
+
+        report = evaluate_retrieval(service, questions, top_k=8)
+        detail = report["details"][0]
+
+        self.assertEqual(report["recall_at_k"], 1.0)
+        self.assertEqual(report["strict_document_recall_at_k"], 0.0)
+        self.assertEqual(report["strict_document_mrr"], 0.0)
+        self.assertEqual(detail["strict_document_hit"], False)
+        self.assertIsNone(detail["strict_document_rank"])
+
     def test_retrieval_eval_details_include_auditable_expected_answer_and_evidence(self):
         service = RagService.from_sample_data()
         questions = [
@@ -227,6 +248,7 @@ class EvalTests(unittest.TestCase):
         self.assertIn("Embedding Hybrid", markdown)
         self.assertIn("Delta", markdown)
         self.assertIn("+50.00%", markdown)
+        self.assertIn("StrictDoc@8", markdown)
         self.assertIn("## Changed Questions", markdown)
         self.assertIn("q1", markdown)
         self.assertIn("改善", markdown)

@@ -9,7 +9,10 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
     hits = 0
     primary_questions = 0
     primary_hits = 0
+    strict_document_questions = 0
+    strict_document_hits = 0
     reciprocal_rank_sum = 0.0
+    strict_document_reciprocal_rank_sum = 0.0
     details: List[Dict[str, Any]] = []
     for item in questions:
         total += 1
@@ -20,8 +23,15 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
         expected_terms = set(item.get("expected_terms") or [])
         expected_primary_terms = set(item.get("expected_primary_terms") or [])
         rank = _first_match_rank(response.evidence[:top_k], expected_docs, expected_terms)
+        strict_document_rank = _first_document_rank(response.evidence[:top_k], expected_docs)
         hit = rank is not None
+        strict_document_hit = strict_document_rank is not None
         primary_hit = _top_result_matches(response.evidence[:1], expected_primary_terms)
+        if expected_docs:
+            strict_document_questions += 1
+            if strict_document_hit:
+                strict_document_hits += 1
+                strict_document_reciprocal_rank_sum += 1.0 / strict_document_rank
         if expected_primary_terms:
             primary_questions += 1
             if primary_hit:
@@ -42,8 +52,13 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
                 "must_not_include": list(item.get("must_not_include") or []),
                 "difficulty": item.get("difficulty", ""),
                 "question_type": item.get("question_type", ""),
+                "source_status": item.get("source_status", ""),
+                "community_source": item.get("community_source", ""),
+                "source_url": item.get("source_url", ""),
                 "hit": hit,
                 "rank": rank,
+                "strict_document_hit": strict_document_hit if expected_docs else None,
+                "strict_document_rank": strict_document_rank,
                 "primary_hit_at_1": primary_hit if expected_primary_terms else None,
                 "top_titles": [result.chunk.citation.title for result in response.evidence[:top_k]],
                 "top_evidence": [_evidence_detail(idx, result) for idx, result in enumerate(response.evidence[:top_k], 1)],
@@ -54,6 +69,13 @@ def evaluate_retrieval(service, questions: Iterable[Dict[str, Any]], top_k: int 
         "top_k": top_k,
         "recall_at_k": hits / total if total else 0.0,
         "mrr": reciprocal_rank_sum / total if total else 0.0,
+        "strict_document_questions": strict_document_questions,
+        "strict_document_recall_at_k": (
+            strict_document_hits / strict_document_questions if strict_document_questions else None
+        ),
+        "strict_document_mrr": (
+            strict_document_reciprocal_rank_sum / strict_document_questions if strict_document_questions else None
+        ),
         "primary_hit_at_1": primary_hits / primary_questions if primary_questions else None,
         "details": details,
     }
@@ -72,6 +94,15 @@ def _first_match_rank(results, expected_docs: set, expected_terms: set) -> int |
         if expected_docs and result.chunk.document_id in expected_docs:
             return idx
         if expected_terms and any(term in haystack for term in expected_terms):
+            return idx
+    return None
+
+
+def _first_document_rank(results, expected_docs: set) -> int | None:
+    if not expected_docs:
+        return None
+    for idx, result in enumerate(results, 1):
+        if result.chunk.document_id in expected_docs:
             return idx
     return None
 
@@ -143,9 +174,9 @@ def render_retrieval_eval_markdown(
         f"- Data dir: `{data_dir or 'unknown'}`",
         f"- Embedding index: `{embedding_index or 'not used'}`",
         "",
-        "## Metrics",
-        "",
     ]
+    lines.extend(_dataset_caveat_lines(report.get("details", [])))
+    lines.extend(["## Metrics", ""])
     if baseline_report:
         lines.extend(_comparison_metrics_table(baseline_report, report, baseline_label, report_label))
     else:
@@ -156,6 +187,8 @@ def render_retrieval_eval_markdown(
             "## Reading Notes",
             "",
             "- 分数是 chunk 级证据分，不是整本书或整篇来源的全局可信度。",
+            "- `Recall@K` 是宽松命中：期望文档或期望词任一出现即可命中。",
+            "- `StrictDoc@K` 是严格文档命中：只统计命中 gold document 的题目。",
             "- 同一来源出现不同分数是正常现象：parent chunk、child chunk、结构类型、关键词重合、语义分和父子扩展倍率都可能不同。",
             "- `D/L/A/T/S/C` 分别代表 dense、lexical、alias、title、source、structure，用于解释最终分的组成。",
             "",
@@ -203,35 +236,46 @@ def render_retrieval_eval_summary_markdown(
         f"- Data dir: `{data_dir or 'unknown'}`",
         f"- Embedding index: `{embedding_index or 'not used'}`",
         "",
+    ]
+    lines.extend(_dataset_caveat_lines(details))
+    lines.extend(
+        [
         "## Metrics",
         "",
-        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
-        "| --- | ---: | ---: | ---: | ---: |",
-        "| {} | {} | {} | {} | {} |".format(
+        "| Run | Total | Recall@{} | MRR | StrictDoc@{} | StrictDocMRR | Primary@1 |".format(top_k, top_k),
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| {} | {} | {} | {} | {} | {} | {} |".format(
             _md(report_label),
             report.get("total", 0),
             _pct(report.get("recall_at_k")),
             _num(report.get("mrr")),
+            _metric_pct(report.get("strict_document_recall_at_k")),
+            _metric(report.get("strict_document_mrr")),
             _metric(report.get("primary_hit_at_1")),
         ),
         "",
+        "说明：`Recall@K` 是宽松命中；`StrictDoc@K` 只统计 gold document 命中，更适合判断证据是否真的找对。",
+        "",
         "## Review Table",
         "",
-        "| ID | 问题 | 参考答案 | Hit | Rank | Primary@1 | Top1 | Top3 |",
-        "| --- | --- | --- | --- | ---: | --- | --- | --- |",
-    ]
+        "| ID | 问题 | 参考答案 | Hit | Rank | StrictDoc | StrictRank | Primary@1 | Top1 | Top3 |",
+        "| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | --- |",
+        ]
+    )
     for detail in details:
         evidence = detail.get("top_evidence", [])
         top1 = _compact_evidence(evidence[0]) if evidence else "-"
         top3 = "<br>".join(_compact_evidence(item) for item in evidence[:3]) if evidence else "-"
         primary = detail.get("primary_hit_at_1")
         lines.append(
-            "| {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 _md(detail.get("id", "")),
                 _md(detail.get("question", "")),
                 _md(_truncate(detail.get("reference_answer", ""), 120)),
                 "Y" if detail.get("hit") else "N",
                 detail.get("rank") or "-",
+                _bool_metric(detail.get("strict_document_hit")),
+                detail.get("strict_document_rank") or "-",
                 "-" if primary is None else ("Y" if primary else "N"),
                 _md(top1),
                 _md(top3),
@@ -247,6 +291,8 @@ def render_retrieval_eval_summary_markdown(
         reasons = []
         if not detail.get("hit"):
             reasons.append("未命中期望证据")
+        if detail.get("strict_document_hit") is False:
+            reasons.append("未命中严格 gold document")
         if detail.get("primary_hit_at_1") is False:
             reasons.append("Top1 不是核心证据")
         rank = detail.get("rank")
@@ -271,6 +317,7 @@ def render_retrieval_eval_comparison_summary_markdown(
 ) -> str:
     generated_at = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     top_k = embedding_report.get("top_k", baseline_report.get("top_k", 8))
+    embedding_details = embedding_report.get("details", [])
     lines = [
         f"# {title}",
         "",
@@ -281,25 +328,36 @@ def render_retrieval_eval_comparison_summary_markdown(
         f"- Data dir: `{data_dir or 'unknown'}`",
         f"- Embedding index: `{embedding_index or 'not used'}`",
         "",
+    ]
+    lines.extend(_dataset_caveat_lines(embedding_details))
+    lines.extend(
+        [
         "## Metrics",
         "",
-        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
-        "| --- | ---: | ---: | ---: | ---: |",
+        "| Run | Total | Recall@{} | MRR | StrictDoc@{} | StrictDocMRR | Primary@1 |".format(top_k, top_k),
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
         _summary_metric_row(baseline_label, baseline_report),
         _summary_metric_row(embedding_label, embedding_report),
-        "| Delta | - | {} | {} | {} |".format(
+        "| Delta | - | {} | {} | {} | {} | {} |".format(
             _delta_pct(baseline_report.get("recall_at_k"), embedding_report.get("recall_at_k")),
             _delta_num(baseline_report.get("mrr"), embedding_report.get("mrr")),
+            _delta_pct(
+                baseline_report.get("strict_document_recall_at_k"),
+                embedding_report.get("strict_document_recall_at_k"),
+            ),
+            _delta_num(baseline_report.get("strict_document_mrr"), embedding_report.get("strict_document_mrr")),
             _delta_num(baseline_report.get("primary_hit_at_1"), embedding_report.get("primary_hit_at_1")),
         ),
+        "",
+        "说明：`Recall@K` 是宽松命中；`StrictDoc@K` 只统计 gold document 命中，更适合判断证据是否真的找对。",
         "",
         "## Changed Questions",
         "",
         "| ID | 问题 | 变化 | Token Top1 | Embedding Top1 |",
         "| --- | --- | --- | --- | --- |",
-    ]
+        ]
+    )
     baseline_by_id = {detail.get("id"): detail for detail in baseline_report.get("details", [])}
-    embedding_details = embedding_report.get("details", [])
     changed_rows = []
     for detail in embedding_details:
         baseline = baseline_by_id.get(detail.get("id"))
@@ -340,15 +398,30 @@ def render_retrieval_eval_comparison_summary_markdown(
 def _single_metrics_table(report: Dict[str, Any], label: str) -> List[str]:
     top_k = report.get("top_k", 8)
     return [
-        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
-        "| --- | ---: | ---: | ---: | ---: |",
-        "| {} | {} | {} | {} | {} |".format(
+        "| Run | Total | Recall@{} | MRR | StrictDoc@{} | StrictDocMRR | Primary@1 |".format(top_k, top_k),
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| {} | {} | {} | {} | {} | {} | {} |".format(
             _md(label),
             report.get("total", 0),
             _pct(report.get("recall_at_k")),
             _num(report.get("mrr")),
+            _metric_pct(report.get("strict_document_recall_at_k")),
+            _metric(report.get("strict_document_mrr")),
             _metric(report.get("primary_hit_at_1")),
         ),
+    ]
+
+
+def _dataset_caveat_lines(details: List[Dict[str, Any]]) -> List[str]:
+    statuses = {detail.get("source_status") for detail in details if detail.get("source_status")}
+    if "candidate_unverified" not in statuses:
+        return []
+    return [
+        "## Dataset Caveat",
+        "",
+        "- 本报告包含 `candidate_unverified` 来源题，只能用于压力测试和失败类型分析，不能作为最终产品宣传指标。",
+        "- 正式评测前需要逐题核验社区来源，并收紧 gold evidence。",
+        "",
     ]
 
 
@@ -360,20 +433,24 @@ def _comparison_metrics_table(
 ) -> List[str]:
     top_k = report.get("top_k", baseline.get("top_k", 8))
     return [
-        "| Run | Total | Recall@{} | MRR | Primary@1 |".format(top_k),
-        "| --- | ---: | ---: | ---: | ---: |",
-        "| {} | {} | {} | {} | {} |".format(
+        "| Run | Total | Recall@{} | MRR | StrictDoc@{} | StrictDocMRR | Primary@1 |".format(top_k, top_k),
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| {} | {} | {} | {} | {} | {} | {} |".format(
             _md(baseline_label),
             baseline.get("total", 0),
             _pct(baseline.get("recall_at_k")),
             _num(baseline.get("mrr")),
+            _metric_pct(baseline.get("strict_document_recall_at_k")),
+            _metric(baseline.get("strict_document_mrr")),
             _metric(baseline.get("primary_hit_at_1")),
         ),
-        "| {} | {} | {} | {} | {} |".format(
+        "| {} | {} | {} | {} | {} | {} | {} |".format(
             _md(report_label),
             report.get("total", 0),
             _pct(report.get("recall_at_k")),
             _num(report.get("mrr")),
+            _metric_pct(report.get("strict_document_recall_at_k")),
+            _metric(report.get("strict_document_mrr")),
             _metric(report.get("primary_hit_at_1")),
         ),
     ]
@@ -389,6 +466,11 @@ def _render_question_detail(detail: Dict[str, Any], evidence_limit: int, label: 
     ]
     if primary is not None:
         status_bits.append(f"Primary@1：{'是' if primary else '否'}")
+    strict_document = detail.get("strict_document_hit")
+    if strict_document is not None:
+        strict_rank = detail.get("strict_document_rank")
+        status_bits.append(f"StrictDoc：{'是' if strict_document else '否'}")
+        status_bits.append(f"StrictRank：{strict_rank if strict_rank else '-'}")
     return [
         f"### {detail.get('id', '')}",
         "",
@@ -472,11 +554,13 @@ def _compact_evidence(item: Dict[str, Any]) -> str:
 
 
 def _summary_metric_row(label: str, report: Dict[str, Any]) -> str:
-    return "| {} | {} | {} | {} | {} |".format(
+    return "| {} | {} | {} | {} | {} | {} | {} |".format(
         _md(label),
         report.get("total", 0),
         _pct(report.get("recall_at_k")),
         _num(report.get("mrr")),
+        _metric_pct(report.get("strict_document_recall_at_k")),
+        _metric(report.get("strict_document_mrr")),
         _metric(report.get("primary_hit_at_1")),
     )
 
@@ -499,6 +583,12 @@ def _top1(detail: Dict[str, Any]) -> str:
 
 
 def _question_change_label(baseline: Dict[str, Any], detail: Dict[str, Any]) -> str:
+    base_strict = baseline.get("strict_document_hit")
+    new_strict = detail.get("strict_document_hit")
+    if base_strict is False and new_strict is True:
+        return "改善：命中严格 gold document"
+    if base_strict is True and new_strict is False:
+        return "退步：丢失严格 gold document"
     base_primary = baseline.get("primary_hit_at_1")
     new_primary = detail.get("primary_hit_at_1")
     if base_primary is False and new_primary is True:
@@ -524,6 +614,8 @@ def _question_change_label(baseline: Dict[str, Any], detail: Dict[str, Any]) -> 
 
 def _needs_review(detail: Dict[str, Any]) -> bool:
     if not detail.get("hit"):
+        return True
+    if detail.get("strict_document_hit") is False:
         return True
     if detail.get("primary_hit_at_1") is False:
         return True
@@ -552,6 +644,18 @@ def _metric(value) -> str:
     if value is None:
         return "-"
     return _num(value)
+
+
+def _metric_pct(value) -> str:
+    if value is None:
+        return "-"
+    return _pct(value)
+
+
+def _bool_metric(value) -> str:
+    if value is None:
+        return "-"
+    return "Y" if value else "N"
 
 
 def _truncate(text: str, limit: int) -> str:
