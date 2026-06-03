@@ -57,6 +57,8 @@ http://127.0.0.1:8000
 docs/deployment/public-demo-cloudflare-aliyun.md
 ```
 
+GitHub Actions 会在推送和 PR 时运行仓库级 readiness、单元测试和空白检查。严格全量资产检查需要本地或 ECS 上有授权数据和 `full.jsonl`，不会在 CI 中运行。
+
 常用上线辅助脚本：
 
 ```bash

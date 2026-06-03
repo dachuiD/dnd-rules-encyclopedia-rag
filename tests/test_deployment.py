@@ -23,6 +23,15 @@ class CaptureLLMProvider:
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_ci_workflow_runs_deployment_readiness_and_unit_tests(self):
+        workflow = Path(".github/workflows/ci.yml")
+
+        self.assertTrue(workflow.exists(), "CI workflow should exist")
+        text = workflow.read_text(encoding="utf-8")
+        self.assertIn("scripts/check_deployment_readiness.sh", text)
+        self.assertIn("python3 -m unittest discover -s tests -v", text)
+        self.assertIn("git diff --check", text)
+
     def test_default_compose_defines_production_app_service(self):
         compose = Path("docker-compose.yml").read_text(encoding="utf-8")
 
