@@ -180,8 +180,10 @@ scripts/smoke_public_demo.sh
 - `documents >= 5066`
 - `chunks >= 29868`
 - `embeddings >= 29287`
+- `query_embedding_provider = DashScopeEmbeddingProvider`
+- `answer_provider = DeepSeekLLMProvider`
 
-如果线上误加载成样例数据或缺少全量 embedding，这一步会失败。
+如果线上误加载成样例数据、缺少全量 embedding、误用本地 hash embedding 或 template 回答，这一步会失败。
 
 ## Cloudflare Pages
 

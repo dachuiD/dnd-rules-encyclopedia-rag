@@ -6,9 +6,12 @@ PUBLIC_ORIGIN="${PUBLIC_ORIGIN:-}"
 RAG_GATEWAY_TOKEN="${RAG_GATEWAY_TOKEN:-}"
 CHECK_RATE_LIMIT="${CHECK_RATE_LIMIT:-0}"
 EXPECT_FULL_DATA="${EXPECT_FULL_DATA:-0}"
+EXPECT_PRODUCTION_PROVIDERS="${EXPECT_PRODUCTION_PROVIDERS:-${EXPECT_FULL_DATA}}"
 MIN_HEALTHZ_DOCUMENTS="${MIN_HEALTHZ_DOCUMENTS:-5066}"
 MIN_HEALTHZ_CHUNKS="${MIN_HEALTHZ_CHUNKS:-29868}"
 MIN_HEALTHZ_EMBEDDINGS="${MIN_HEALTHZ_EMBEDDINGS:-29287}"
+EXPECTED_QUERY_PROVIDER="${EXPECTED_QUERY_PROVIDER:-DashScopeEmbeddingProvider}"
+EXPECTED_ANSWER_PROVIDER="${EXPECTED_ANSWER_PROVIDER:-DeepSeekLLMProvider}"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -87,10 +90,47 @@ print(
 PY
 }
 
+check_healthz_providers() {
+  if [[ "$EXPECT_PRODUCTION_PROVIDERS" != "1" ]]; then
+    echo "Skipping production provider check because EXPECT_PRODUCTION_PROVIDERS=${EXPECT_PRODUCTION_PROVIDERS}."
+    return
+  fi
+
+  python3 - "${tmp_dir}/body" "$EXPECTED_QUERY_PROVIDER" "$EXPECTED_ANSWER_PROVIDER" <<'PY'
+import json
+import sys
+
+body_path, expected_query_provider, expected_answer_provider = sys.argv[1:4]
+with open(body_path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+
+actual_query_provider = payload.get("query_embedding_provider")
+actual_answer_provider = payload.get("answer_provider")
+
+if actual_query_provider != expected_query_provider:
+    raise SystemExit(
+        "healthz query_embedding_provider expected "
+        f"{expected_query_provider}, got {actual_query_provider}"
+    )
+
+if actual_answer_provider != expected_answer_provider:
+    raise SystemExit(
+        "healthz answer_provider expected "
+        f"{expected_answer_provider}, got {actual_answer_provider}"
+    )
+
+print(
+    "backend production providers: "
+    f"query={actual_query_provider} answer={actual_answer_provider}"
+)
+PY
+}
+
 echo "Checking backend health..."
 health_status="$(curl -sS -o "${tmp_dir}/body" -w "%{http_code}" "${BACKEND_ORIGIN%/}/healthz")"
 expect_status "$health_status" "200" "backend /healthz"
 check_healthz_counts
+check_healthz_providers
 
 echo "Checking backend token protection..."
 unauthorized_status="$(request_json "${BACKEND_ORIGIN%/}/api/ask" "$(ask_payload "隐身的人攻击有优势吗？")")"

@@ -45,9 +45,12 @@ class DeploymentTests(unittest.TestCase):
         script = Path("scripts/smoke_public_demo.sh").read_text(encoding="utf-8")
 
         self.assertIn("EXPECT_FULL_DATA", script)
+        self.assertIn("EXPECT_PRODUCTION_PROVIDERS", script)
         self.assertIn("MIN_HEALTHZ_DOCUMENTS", script)
         self.assertIn("MIN_HEALTHZ_CHUNKS", script)
         self.assertIn("MIN_HEALTHZ_EMBEDDINGS", script)
+        self.assertIn("DashScopeEmbeddingProvider", script)
+        self.assertIn("DeepSeekLLMProvider", script)
 
     def test_default_compose_defines_production_app_service(self):
         compose = Path("docker-compose.yml").read_text(encoding="utf-8")
