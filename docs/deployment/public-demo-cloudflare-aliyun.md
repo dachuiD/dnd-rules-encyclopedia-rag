@@ -82,7 +82,7 @@ scripts/deploy_ecs.sh
 脚本默认会同步应用代码、授权数据、全量 embedding index，并在 ECS 上执行：
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build app
+docker compose up -d --build app
 ```
 
 如果数据或索引已经在 ECS 上，可跳过对应同步：
@@ -115,18 +115,27 @@ RAG_GATEWAY_TOKEN=replace-with-long-random-token
 
 `RAG_GATEWAY_TOKEN` 必须和 Cloudflare Pages Function 的环境变量一致。
 
+## ECS 安全组
+
+安全组只需要开放：
+
+- SSH：`22/tcp`，建议限制为自己的办公/家庭 IP。
+- FastAPI 后端：`8000/tcp`，公开访问也可以，因为 `/api/*` 仍要求 `X-RAG-GATEWAY-TOKEN`。
+
+不要开放数据库端口。当前首版不在 ECS 对外暴露 Postgres/pgvector。
+
 ## 启动后端
 
 ```bash
 cd /opt/dnd-rag/app
-docker compose -f docker-compose.prod.yml up -d --build app
-docker compose -f docker-compose.prod.yml logs -f app
+docker compose up -d --build app
+docker compose logs -f app
 ```
 
 如需在非 ECS 机器上预览 compose 配置，可临时覆盖 env 文件路径：
 
 ```bash
-RAG_ENV_FILE=.env.example docker compose -f docker-compose.prod.yml config
+RAG_ENV_FILE=.env.example docker compose config
 ```
 
 健康检查：

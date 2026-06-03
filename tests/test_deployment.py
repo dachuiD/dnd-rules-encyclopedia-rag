@@ -23,6 +23,15 @@ class CaptureLLMProvider:
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_default_compose_defines_production_app_service(self):
+        compose = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+        self.assertIn("  app:", compose)
+        self.assertIn("EMBEDDING_INDEX_PATH", compose)
+        self.assertIn("/opt/dnd-rag/storage/embedding-index/full.jsonl", compose)
+        self.assertIn("--workers", compose)
+        self.assertIn('"1"', compose)
+
     def test_build_service_loads_fresh_embedding_index_and_query_provider(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "data"

@@ -72,9 +72,15 @@ check_static_assets() {
 
 check_config_files() {
   require_file "${ROOT_DIR}/Dockerfile" "Dockerfile"
+  require_file "${ROOT_DIR}/docker-compose.yml" "default compose file"
   require_file "${ROOT_DIR}/docker-compose.prod.yml" "production compose file"
   require_file "${ROOT_DIR}/wrangler.toml" "Wrangler Pages config"
   require_file "${ROOT_DIR}/.env.example" "environment template"
+
+  grep -q '^  app:' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml must define app service"
+  grep -q -- '--workers' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml app service must pin uvicorn workers"
+  grep -q 'EMBEDDING_INDEX_PATH.*full.jsonl' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml must point app to full embedding index"
+  pass "default compose app service"
 
   grep -q 'pages_build_output_dir = "static"' "${ROOT_DIR}/wrangler.toml" || fail "wrangler.toml must set pages_build_output_dir to static"
   pass "Wrangler build output"

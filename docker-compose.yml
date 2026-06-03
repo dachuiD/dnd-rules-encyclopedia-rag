@@ -1,4 +1,31 @@
 services:
+  app:
+    build:
+      context: .
+    env_file:
+      - path: ${RAG_ENV_FILE:-/opt/dnd-rag/.env.production}
+        required: false
+    environment:
+      FIVEETOOLS_DATA_DIR: ${FIVEETOOLS_DATA_DIR:-/opt/dnd-rag/data/fvtt-cn-5etools/data}
+      EMBEDDING_INDEX_PATH: ${EMBEDDING_INDEX_PATH:-/opt/dnd-rag/storage/embedding-index/full.jsonl}
+      QUERY_EMBEDDING_PROVIDER: ${QUERY_EMBEDDING_PROVIDER:-dashscope}
+      ANSWER_PROVIDER: ${ANSWER_PROVIDER:-deepseek}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /opt/dnd-rag/data:/opt/dnd-rag/data:ro
+      - /opt/dnd-rag/storage:/opt/dnd-rag/storage:ro
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"
+
   postgres:
     image: pgvector/pgvector:pg16
     environment:
