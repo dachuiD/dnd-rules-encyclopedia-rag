@@ -5,6 +5,10 @@ set -euo pipefail
 PUBLIC_ORIGIN="${PUBLIC_ORIGIN:-}"
 RAG_GATEWAY_TOKEN="${RAG_GATEWAY_TOKEN:-}"
 CHECK_RATE_LIMIT="${CHECK_RATE_LIMIT:-0}"
+EXPECT_FULL_DATA="${EXPECT_FULL_DATA:-0}"
+MIN_HEALTHZ_DOCUMENTS="${MIN_HEALTHZ_DOCUMENTS:-5066}"
+MIN_HEALTHZ_CHUNKS="${MIN_HEALTHZ_CHUNKS:-29868}"
+MIN_HEALTHZ_EMBEDDINGS="${MIN_HEALTHZ_EMBEDDINGS:-29287}"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -49,9 +53,44 @@ ask_payload() {
   printf '{"question":%s,"scope":"%s"}' "$escaped" "$scope"
 }
 
+check_healthz_counts() {
+  if [[ "$EXPECT_FULL_DATA" != "1" ]]; then
+    echo "Skipping full healthz count check because EXPECT_FULL_DATA=${EXPECT_FULL_DATA}."
+    return
+  fi
+
+  python3 - "${tmp_dir}/body" "$MIN_HEALTHZ_DOCUMENTS" "$MIN_HEALTHZ_CHUNKS" "$MIN_HEALTHZ_EMBEDDINGS" <<'PY'
+import json
+import sys
+
+body_path, min_documents, min_chunks, min_embeddings = sys.argv[1:5]
+with open(body_path, "r", encoding="utf-8") as fh:
+    payload = json.load(fh)
+
+checks = [
+    ("documents", int(min_documents)),
+    ("chunks", int(min_chunks)),
+    ("embeddings", int(min_embeddings)),
+]
+
+for key, minimum in checks:
+    value = int(payload.get(key, 0))
+    if value < minimum:
+        raise SystemExit(f"healthz {key} expected >= {minimum}, got {value}")
+
+print(
+    "backend full data healthz: "
+    f"documents={payload.get('documents')} "
+    f"chunks={payload.get('chunks')} "
+    f"embeddings={payload.get('embeddings')}"
+)
+PY
+}
+
 echo "Checking backend health..."
 health_status="$(curl -sS -o "${tmp_dir}/body" -w "%{http_code}" "${BACKEND_ORIGIN%/}/healthz")"
 expect_status "$health_status" "200" "backend /healthz"
+check_healthz_counts
 
 echo "Checking backend token protection..."
 unauthorized_status="$(request_json "${BACKEND_ORIGIN%/}/api/ask" "$(ask_payload "隐身的人攻击有优势吗？")")"

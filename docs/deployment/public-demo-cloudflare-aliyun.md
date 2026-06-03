@@ -171,8 +171,17 @@ curl http://ECS_IP:8000/api/ask \
 ```bash
 BACKEND_ORIGIN=http://ECS_IP:8000 \
 RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+EXPECT_FULL_DATA=1 \
 scripts/smoke_public_demo.sh
 ```
+
+`EXPECT_FULL_DATA=1` 会校验 `/healthz` 至少返回：
+
+- `documents >= 5066`
+- `chunks >= 29868`
+- `embeddings >= 29287`
+
+如果线上误加载成样例数据或缺少全量 embedding，这一步会失败。
 
 ## Cloudflare Pages
 
@@ -243,6 +252,7 @@ Pages 发布后可以继续复用 smoke 脚本：
 BACKEND_ORIGIN=http://ECS_IP:8000 \
 PUBLIC_ORIGIN=https://PROJECT.pages.dev \
 RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+EXPECT_FULL_DATA=1 \
 scripts/smoke_public_demo.sh
 ```
 

@@ -74,12 +74,14 @@ ECS_HOST=ECS_IP ECS_USER=root scripts/deploy_ecs.sh
 # 检查 ECS healthz、token 保护和 3 个真实问题
 BACKEND_ORIGIN=http://ECS_IP:8000 \
 RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+EXPECT_FULL_DATA=1 \
 scripts/smoke_public_demo.sh
 
 # Pages 发布后检查公开入口
 BACKEND_ORIGIN=http://ECS_IP:8000 \
 PUBLIC_ORIGIN=https://PROJECT.pages.dev \
 RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+EXPECT_FULL_DATA=1 \
 scripts/smoke_public_demo.sh
 ```
 

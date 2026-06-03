@@ -41,6 +41,14 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertIn("Cloudflare Function smoke tests passed", result.stdout)
 
+    def test_public_demo_smoke_can_require_full_healthz_counts(self):
+        script = Path("scripts/smoke_public_demo.sh").read_text(encoding="utf-8")
+
+        self.assertIn("EXPECT_FULL_DATA", script)
+        self.assertIn("MIN_HEALTHZ_DOCUMENTS", script)
+        self.assertIn("MIN_HEALTHZ_CHUNKS", script)
+        self.assertIn("MIN_HEALTHZ_EMBEDDINGS", script)
+
     def test_default_compose_defines_production_app_service(self):
         compose = Path("docker-compose.yml").read_text(encoding="utf-8")
 
