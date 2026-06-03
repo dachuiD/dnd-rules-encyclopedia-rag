@@ -103,6 +103,15 @@ class MultiHopPlannerTests(unittest.TestCase):
                 },
                 "spells",
             ),
+            (
+                {
+                    "name": "施法构材",
+                    "source": "PHB",
+                    "page": 85,
+                    "entries": ["如果一个角色感知到了施法、法术效果，或者两者都感知到了，该角色可以尝试识别法术。"],
+                },
+                "actions",
+            ),
         ]))
         planner = MultiHopEvidencePlanner(retriever)
 
@@ -111,10 +120,92 @@ class MultiHopPlannerTests(unittest.TestCase):
         self.assertEqual(result.coverage_score, 1.0)
         self.assertEqual(
             {group.requirement.id for group in result.requirement_evidence if group.covered},
-            {"counterspell_trigger", "subtle_spell_mechanic"},
+            {"counterspell_trigger", "subtle_spell_mechanic", "spell_component_observability"},
         )
         self.assertIn("反制法术", [item.chunk.citation.title for item in result.evidence[:3]])
         self.assertIn("微妙法术", [item.chunk.citation.title for item in result.evidence[:3]])
+        self.assertIn("施法构材", [item.chunk.citation.title for item in result.evidence[:3]])
+
+    def test_subtle_counterspell_marks_observability_missing_without_spellcasting_evidence(self):
+        retriever = HybridRetriever(_chunks_for_entries([
+            (
+                {
+                    "name": "反制法术",
+                    "source": "PHB",
+                    "page": 228,
+                    "entries": ["施法时间：1反应，在你看见一个距离你60尺以内的生物施放法术时进行。"],
+                },
+                "spells",
+            ),
+            (
+                {
+                    "name": "微妙法术",
+                    "source": "PHB",
+                    "page": 102,
+                    "entries": ["你施展法术时，可以花费1点术法点，使其无需姿势或言语成分。"],
+                },
+                "optionalfeatures",
+            ),
+            (
+                {
+                    "name": "施法",
+                    "source": "PHB",
+                    "page": 192,
+                    "entries": ["每个法术都有着自己的施法时间，指定了施法者必须使用一个动作、反应、数分钟、或甚至数小时的时间才能施放该法术。"],
+                },
+                "actions",
+            ),
+        ]))
+        planner = MultiHopEvidencePlanner(retriever)
+
+        result = planner.search("法术被超魔静默施法处理后，还能被反制法术反制吗？", scope=SearchScope.CORE, top_k=4)
+
+        self.assertEqual(
+            {group.requirement.id for group in result.requirement_evidence},
+            {"counterspell_trigger", "subtle_spell_mechanic", "spell_component_observability"},
+        )
+        self.assertEqual(
+            [requirement.id for requirement in result.missing_requirements],
+            ["spell_component_observability"],
+        )
+
+    def test_subtle_counterspell_covers_observability_with_spell_identification_evidence(self):
+        retriever = HybridRetriever(_chunks_for_entries([
+            (
+                {
+                    "name": "反制法术",
+                    "source": "PHB",
+                    "page": 228,
+                    "entries": ["施法时间：1反应，在你看见一个距离你60尺以内的生物施放法术时进行。"],
+                },
+                "spells",
+            ),
+            (
+                {
+                    "name": "微妙法术",
+                    "source": "PHB",
+                    "page": 102,
+                    "entries": ["你施展法术时，可以花费1点术法点，使其无需姿势或言语成分。"],
+                },
+                "optionalfeatures",
+            ),
+            (
+                {
+                    "name": "施法构材",
+                    "source": "PHB",
+                    "page": 85,
+                    "entries": ["如果一个角色感知到了施法、法术效果，或者两者都感知到了，该角色可以尝试识别法术。"],
+                },
+                "actions",
+            ),
+        ]))
+        planner = MultiHopEvidencePlanner(retriever)
+
+        result = planner.search("法术被超魔静默施法处理后，还能被反制法术反制吗？", scope=SearchScope.CORE, top_k=4)
+
+        self.assertEqual(result.coverage_score, 1.0)
+        self.assertEqual(result.missing_requirements, [])
+        self.assertIn("施法构材", [item.chunk.citation.title for item in result.evidence[:3]])
 
     def test_special_sense_invisible_question_requires_both_sense_and_condition(self):
         retriever = HybridRetriever(_chunks_for_entries([

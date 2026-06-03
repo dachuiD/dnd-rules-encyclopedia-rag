@@ -68,7 +68,7 @@ bonus_action_spell_limit -> missing
 - `反制法术`：看见 60 尺内生物施法时触发。
 - `精妙法术`：无需姿势或声音构材。
 
-但仍缺少支撑“构材被移除后，施法是否仍可被观察到”的规则证据。下一轮应补充或抽取更细的需求：
+但仍缺少支撑“构材被移除后，施法是否仍可被观察到”的规则证据。当前已补充更细的 planner 需求：
 
 ```text
 spell_component_observability
@@ -76,17 +76,19 @@ visible_casting_component
 material_component_visibility
 ```
 
+当前 core 数据下，`spell_component_observability` 会保持 missing。普通 `施法` 动作不会被误判为覆盖；只有包含“感知到了施法”或标题为 `辨识法术`、`施法构材` 的证据才会覆盖这个需求。
+
 ## 对产品的影响
 
 这次审计的产品意义是：不要把所有失败都归因于 embedding 或模型。
 
 - `专注`：数据存在，读取策略有 bug，应该修 adapter。
 - `附赠动作施法限制`：当前本地数据缺少章节正文，应该补数据或保持证据不足。
-- `静默施法 + 反制法术`：证据有一部分，但需求拆解还不够细，应该扩展 planner。
+- `静默施法 + 反制法术`：证据有一部分，planner 已扩展出 `spell_component_observability`；当前缺的是可授权的章节证据。
 
 ## 下一步
 
 - 获取并确认可授权展示的 PHB 章节正文数据。
 - 对补入章节做规则章节 chunk，而不是简单长文本切块。
 - 重建 full embedding index。
-- 将 `bonus_action_spell_limit` 和 `spell_component_observability` 加入多跳回归题。
+- 将 `bonus_action_spell_limit` 和 `spell_component_observability` 保留为多跳回归题。

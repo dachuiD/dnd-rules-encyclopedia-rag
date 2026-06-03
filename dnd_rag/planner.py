@@ -166,6 +166,21 @@ def _concepts() -> List[_Concept]:
         ),
         _Concept(
             requirement=EvidenceRequirement(
+                id="spell_component_observability",
+                label="施法构材可观察性",
+                query="辨识法术 感知 施法 法术效果 声音构材 姿势构材 材料构材 看见",
+                required_terms=["感知到了施法", "感知到了"],
+                preferred_categories=["actions", "book", "variantrules"],
+                expected_titles=["辨识法术", "施法构材"],
+                role="visibility_rule",
+            ),
+            matcher=_mentions_casting_observability_question,
+            entity_markers=[],
+            category_markers=["构材"],
+            mechanic_markers=["看见施法", "辨识法术", "可观察施法"],
+        ),
+        _Concept(
+            requirement=EvidenceRequirement(
                 id="invisible_condition",
                 label="隐形状态规则",
                 query="隐形 隐身 状态 攻击检定 优势 劣势 看见",
@@ -267,6 +282,12 @@ def _mentions_subtle_spell(query: str) -> bool:
     if "微妙法术" in query or "subtle spell" in query or "静默施法" in query:
         return True
     return "超魔" in query and ("静默" in query or "言语" in query or "姿势" in query)
+
+
+def _mentions_casting_observability_question(query: str) -> bool:
+    has_counterspell = "反制法术" in query or "counterspell" in query
+    has_hidden_component = _mentions_subtle_spell(query) or "构材" in query or "成分" in query
+    return has_counterspell and has_hidden_component
 
 
 def _mentions_ready_spell(query: str) -> bool:

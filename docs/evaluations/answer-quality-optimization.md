@@ -90,22 +90,22 @@ bonus_action_spell_limit -> missing
 
 | Variant | Avg Total | Wins | Ties | Losses |
 | --- | ---: | ---: | ---: | ---: |
-| closed_book | 11.75 | 7 | 0 | 1 |
-| evidence_only | 11.38 | 5 | 0 | 3 |
-| rag_product | 12.75 | 6 | 2 | 0 |
+| closed_book | 11.25 | 6 | 0 | 2 |
+| evidence_only | 11.50 | 5 | 0 | 3 |
+| rag_product | 13.25 | 7 | 1 | 0 |
 
 维度均分：
 
 | Variant | Correctness | Completeness | Evidence | Citation | Caution | Clarity | Memory |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| evidence_only | 1.50 | 1.38 | 1.50 | 1.88 | 1.50 | 1.88 | 1.75 |
-| rag_product | 1.75 | 1.75 | 1.88 | 2.00 | 1.88 | 2.00 | 1.75 |
+| evidence_only | 1.62 | 1.38 | 1.50 | 1.75 | 1.50 | 2.00 | 1.75 |
+| rag_product | 1.88 | 1.75 | 2.00 | 2.00 | 1.88 | 2.00 | 2.00 |
 
 当前结论：
 
 - `rag_product` 已经在小样本上超过 `evidence_only`，但样本量仍小，不能当作最终宣传指标。
 - 优势主要来自复杂题：RAG 能利用结构化证据和需求覆盖表，避免 evidence-only 的过度推理。
-- `Memory` 分数已与 `evidence_only` 持平，但仍要继续做 `claim -> evidence` 审计，因为部分多跳题仍会出现证据外推理。
+- `Memory` 分数已超过 `evidence_only`，但仍要继续做 `claim -> evidence` 审计，因为自动裁判只能做第一轮 triage。
 
 ## 代表题
 
@@ -115,10 +115,11 @@ bonus_action_spell_limit -> missing
 
 - `反制法术` 的反应触发条件：需要看见 60 尺内生物施法。
 - `精妙法术`：无需姿势或声音构材。
+- `施法构材可观察性`：required，但当前 core 数据中 missing。
 
-`rag_product` 当前得分：`9/14`。
+`rag_product` 当前得分：`13/14`。
 
-原因不是检索完全失败，而是证据需求还不够细：现有证据包覆盖了 `反制法术` 和 `精妙法术`，但缺少“被移除构材后施法是否仍可被观察到”的支撑规则。下一轮应补充 `spell_component_observability` 或 `visible_casting_component` 类需求。
+改动后答案不再外推“材料构材是否可见”，而是指出：现有证据覆盖了触发条件和精妙法术效果，但缺少 `spell_component_observability`，因此不能给出确定裁定。
 
 ### `community-rpgse-ready-bonus-action-spell`
 

@@ -66,6 +66,18 @@ status -> conditionsdiseases
 
 目的是减少简单题里的无端扩写，让用户先获得清晰裁定。
 
+### 5. 追加：施法构材可观察性需求
+
+针对 `静默施法 + 反制法术`，本轮又补了一层多跳需求：
+
+```text
+spell_component_observability
+```
+
+它要求系统额外寻找“施法是否能被感知/观察”的证据。普通 `施法` 动作只说明施法时间，不足以覆盖这个需求；只有 `感知到了施法`、`辨识法术`、`施法构材` 这类证据才算覆盖。
+
+当前 core 数据中该需求为 missing，所以 RAG 会保守回答证据不足。
+
 ## 评测结果
 
 ### 回答质量小样本
@@ -74,15 +86,16 @@ status -> conditionsdiseases
 
 | Variant | Avg Total | Wins | Ties | Losses |
 | --- | ---: | ---: | ---: | ---: |
-| closed_book | 11.75 | 7 | 0 | 1 |
-| evidence_only | 11.38 | 5 | 0 | 3 |
-| rag_product | 12.75 | 6 | 2 | 0 |
+| closed_book | 11.25 | 6 | 0 | 2 |
+| evidence_only | 11.50 | 5 | 0 | 3 |
+| rag_product | 13.25 | 7 | 1 | 0 |
 
 关键观察：
 
 - `rag_product` 重新明显超过 `evidence_only`。
-- `Memory Contamination` 从 `0.75` 回升到 `1.75`，与 `evidence_only` 持平。
+- `Memory Contamination` 达到 `2.00`，高于 `evidence_only 1.75`。
 - `专注` 和 `沉默术` 两类简单裁定题均达到 `14/14`。
+- `静默施法 + 反制法术` 从过度外推改为明确暴露 `spell_component_observability` missing，`rag_product` 得分 `13/14`。
 
 ### 检索对比
 
@@ -104,13 +117,12 @@ status -> conditionsdiseases
 
 - 本地数据没有完整 `book-phb` 或 PHB 第十章章节正文。
 - `附赠动作施法限制` 仍是 required missing，RAG 应保持证据不足，而不是硬答。
-- `静默施法 + 反制法术` 还缺“构材被移除后是否仍可观察到施法”的证据需求。
+- `静默施法 + 反制法术` 已有“构材被移除后是否仍可观察到施法”的证据需求，但当前 core 数据仍缺相应规则证据。
 - 全量种子题中仍有 Top1 噪声，尤其是专长、物品、怪物 feature 与通用规则竞争。
 
 ## 下一步
 
 - 获取并确认可授权展示的 PHB 章节正文数据。
-- 增加 `spell_component_observability` 类多跳需求。
 - 对专长、物品、怪物 feature 做类别路由和别名增强。
 - 引入 `claim -> evidence` 审计，检查答案每个关键判断是否真的有证据支撑。
 
@@ -118,7 +130,7 @@ status -> conditionsdiseases
 
 ```text
 python3 -m unittest discover -s tests -v
-Ran 58 tests in 0.253s
+Ran 60 tests in 0.284s
 OK
 
 git diff --check
