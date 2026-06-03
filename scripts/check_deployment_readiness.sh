@@ -95,7 +95,13 @@ check_script_syntax() {
   bash -n "${ROOT_DIR}/scripts/smoke_public_demo.sh"
   bash -n "${ROOT_DIR}/scripts/check_deployment_readiness.sh"
   node --check "${ROOT_DIR}/functions/api/[[path]].js" >/dev/null
+  node --check "${ROOT_DIR}/scripts/test_cloudflare_function.mjs" >/dev/null
   pass "deployment script syntax"
+}
+
+check_cloudflare_function_behavior() {
+  node "${ROOT_DIR}/scripts/test_cloudflare_function.mjs" >/dev/null
+  pass "Cloudflare Function smoke behavior"
 }
 
 check_full_assets() {
@@ -116,6 +122,7 @@ require_command bash
 check_static_assets
 check_config_files
 check_script_syntax
+check_cloudflare_function_behavior
 git -C "$ROOT_DIR" diff --check
 pass "git diff whitespace check"
 check_no_secret_patterns

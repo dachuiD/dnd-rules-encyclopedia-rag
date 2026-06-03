@@ -37,6 +37,9 @@ jobs:
       - name: Deployment readiness
         run: scripts/check_deployment_readiness.sh
 
+      - name: Cloudflare Function smoke
+        run: node scripts/test_cloudflare_function.mjs
+
       - name: Unit tests
         run: python3 -m unittest discover -s tests -v
 

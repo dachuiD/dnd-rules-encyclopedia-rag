@@ -35,7 +35,7 @@ STRICT_ASSETS=1 scripts/check_deployment_readiness.sh
 - 部署脚本、Cloudflare Function、静态前端、Docker/Compose 配置都存在。
 - 仓库内没有明显真实 key 形态的敏感值。
 
-GitHub Actions 会自动运行仓库级 readiness、单元测试和空白检查。严格资产检查不在 CI 中运行，因为授权数据和 embedding index 不提交 Git。
+GitHub Actions 会自动运行仓库级 readiness、Cloudflare Function smoke、单元测试和空白检查。严格资产检查不在 CI 中运行，因为授权数据和 embedding index 不提交 Git。
 
 ## ECS 规格
 

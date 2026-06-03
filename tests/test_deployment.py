@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,6 +32,14 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn("scripts/check_deployment_readiness.sh", text)
         self.assertIn("python3 -m unittest discover -s tests -v", text)
         self.assertIn("git diff --check", text)
+
+    def test_cloudflare_function_smoke_script_exercises_proxy_and_rate_limit(self):
+        script = Path("scripts/test_cloudflare_function.mjs")
+
+        self.assertTrue(script.exists(), "Cloudflare Function smoke script should exist")
+        result = subprocess.run(["node", str(script)], text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("Cloudflare Function smoke tests passed", result.stdout)
 
     def test_default_compose_defines_production_app_service(self):
         compose = Path("docker-compose.yml").read_text(encoding="utf-8")
