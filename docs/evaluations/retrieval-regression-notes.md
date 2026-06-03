@@ -2,7 +2,7 @@
 
 这份记录用于归档：全量 embedding 提升了整体指标，但在部分问题上仍然出现 Top1 证据变差、命中证据靠后或语义漂移的情况。
 
-最近更新：`2026-06-03` 新增多跳 `Evidence Planner` 后，复合裁定题可以按证据需求分别检索并合并证据包；社区真实候选题里 `魔法物品 + 反制法术` 这类问题已不再依赖单个 Top1 相似度。
+最近更新：`2026-06-03` 新增多跳 `Evidence Planner`、法术结构化规则 chunk、回答层 evidence requirement gate 后，复合裁定题可以按证据需求分别检索并合并证据包；社区真实候选题里 `魔法物品 + 反制法术`、`微妙法术 + 反制法术` 这类问题已不再依赖单个 Top1 相似度。
 
 来源报告：
 
@@ -13,12 +13,12 @@
 
 | 评测集 | 检索方式 | Recall@8 | MRR | StrictDoc@8 | StrictDocMRR | Primary@1 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 全量种子题 | Token Hybrid | 74.19% | 0.5815 | 51.61% | 0.4116 | 45.16% |
+| 全量种子题 | Token Hybrid | 74.19% | 0.5808 | 51.61% | 0.4108 | 45.16% |
 | 全量种子题 | Embedding Hybrid | 96.77% | 0.8532 | 96.77% | 0.7349 | 74.19% |
-| 社区真实候选题 | Token Hybrid | 100.00% | 0.8542 | 77.78% | 0.5370 | 66.67% |
+| 社区真实候选题 | Token Hybrid | 100.00% | 0.8958 | 100.00% | 0.6640 | 75.00% |
 | 社区真实候选题 | Embedding Hybrid | 100.00% | 1.0000 | 100.00% | 0.9444 | 100.00% |
 
-结论：embedding 整体有效，精确条目名保护修复了 `沉默术`、`反制法术` 这类显式实体被相邻语义压过的问题；多跳 planner 进一步修复了“需要两组以上规则证据”的复合裁定题。后续不能只看聚合指标调参，而要把失败模式归类后一起处理。
+结论：embedding 整体有效，精确条目名保护修复了 `沉默术`、`反制法术` 这类显式实体被相邻语义压过的问题；多跳 planner 和结构化字段 chunk 进一步修复了“需要两组以上规则证据”的复合裁定题。后续不能只看聚合指标调参，而要把失败模式归类后一起处理。
 
 补充口径：
 
@@ -62,6 +62,7 @@
 | `community-rpgse-silence-verbal-components` | 已修复，Embedding Top1 为 `沉默术`。 | 精确条目名保护和标题召回起效。 | 保留为回归测试，避免后续权重调整再次退化。 |
 | `community-rpgse-subtle-counterspell` | 已修复，Embedding Top1 为 `反制法术`，planner 同时要求 `微妙法术` 证据。 | `counterspell`/反制相关别名、精确标题保护和多跳需求合并起效。 | 保留为“超魔机制 + 触发规则”类回归测试。 |
 | `community-rpgse-magic-item-counterspell` | 已修复，证据包同时覆盖 `反制法术` 与 `激活物品`。 | 多跳 planner 将问题拆成“反制法术触发条件 + 魔法物品激活机制”。 | 后续用 `Requirement Coverage@K` 和 `Complete Case Rate` 作为正式多跳指标。 |
+| `community-rpgse-ready-bonus-action-spell` | 已识别为证据缺失型复合题。 | 当前数据有 `准备法术机制`，但缺 PHB 第十章 `附赠动作施法限制` 正文。 | 补齐规则章节正文；当前回答层必须输出证据不足，不能硬答。 |
 
 ## 多跳检索补充
 
@@ -79,24 +80,27 @@
 
 ## 回答质量观察
 
-来源报告：`docs/evaluations/answer-eval-small-sample.md`
+来源报告：
+
+- `docs/evaluations/answer-eval-small-sample.md`
+- `docs/evaluations/answer-quality-optimization.md`
 
 | Variant | Avg Total | Wins | Ties | Losses |
 | --- | ---: | ---: | ---: | ---: |
-| closed_book | 9.62 | 4 | 1 | 3 |
-| evidence_only | 12.50 | 5 | 0 | 3 |
-| rag_product | 11.75 | 4 | 1 | 3 |
+| closed_book | 11.25 | 6 | 1 | 1 |
+| evidence_only | 11.38 | 5 | 0 | 3 |
+| rag_product | 12.38 | 6 | 0 | 2 |
 
 观察：
 
-- `evidence_only` 暂时最高，说明“证据足够时，少发挥反而更稳”。
-- `rag_product` 的引用准确度和谨慎性较好，但仍会在部分题目中加入 evidence pack 之外的规则细节。
-- `closed_book` 有时回答更完整，但记忆污染明显，不适合作为可追溯规则产品的主要形态。
+- `rag_product` 已在 8 题小样本上超过 `evidence_only`，但样本量仍小，不能当作最终宣传指标。
+- 优势主要来自复杂题：结构化法术字段和 Evidence Requirements 让回答器知道哪些证据已覆盖、哪些缺失。
+- `Memory` 分数仍弱于 `evidence_only`，说明后续还需要做 `claim -> evidence` 审计。
 
 下一步：
 
-- 回答生成前增加证据覆盖检查：每个关键结论必须能映射到 evidence id。
-- 对检索证据不足的问题，强制输出“证据不足 + 需要补充的证据”，而不是让模型凭记忆补完。
+- 补齐 PHB 第十章规则章节正文，尤其是施法、构材、专注、附赠动作施法限制。
+- 为新增 `spell_metadata` chunk 重新跑 embedding，避免长期依赖 lexical fallback。
 - 增加 `claim -> evidence` 自动审计，作为 answer eval 之外的更细粒度指标。
 
 ## 下一轮调参原则

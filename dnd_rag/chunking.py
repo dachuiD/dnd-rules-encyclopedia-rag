@@ -38,11 +38,25 @@ def build_chunks(doc: RuleDocument) -> List[RuleChunk]:
 def _child_chunks(doc: RuleDocument, parent_id: str) -> List[RuleChunk]:
     entries = []
     raw = doc.raw_json
+    chunks: List[RuleChunk] = []
+    if doc.category == "spells":
+        metadata = _spell_metadata_text(raw)
+        if metadata:
+            chunks.append(
+                _make_chunk(
+                    doc=doc,
+                    chunk_level="child",
+                    chunk_type="spell_metadata",
+                    title_path=[doc.title_zh, "规则摘要"],
+                    text=metadata,
+                    parent_chunk_id=parent_id,
+                    suffix="spell-metadata",
+                )
+            )
     for key in ["entries", "entriesHigherLevel"]:
         if key in raw:
             for path, text in iter_entry_sections(raw[key]):
                 entries.append((path, text))
-    chunks: List[RuleChunk] = []
     for idx, (path, text) in enumerate(entries):
         title_path = [doc.title_zh] + path
         chunks.append(
@@ -57,6 +71,128 @@ def _child_chunks(doc: RuleDocument, parent_id: str) -> List[RuleChunk]:
             )
         )
     return chunks
+
+
+def _spell_metadata_text(raw: dict) -> str:
+    parts = []
+    time_text = _spell_time_text(raw.get("time"))
+    if time_text:
+        parts.append(f"施法时间：{time_text}")
+    range_text = _spell_range_text(raw.get("range"))
+    if range_text:
+        parts.append(f"射程：{range_text}")
+    components_text = _spell_components_text(raw.get("components"))
+    if components_text:
+        parts.append(f"构材：{components_text}")
+    duration_text = _spell_duration_text(raw.get("duration"))
+    if duration_text:
+        parts.append(f"持续时间：{duration_text}")
+    return "；".join(parts)
+
+
+def _spell_time_text(times) -> str:
+    if not isinstance(times, list):
+        return ""
+    items = []
+    for item in times:
+        if not isinstance(item, dict):
+            continue
+        number = item.get("number")
+        unit = _unit_zh(item.get("unit"))
+        text = f"{number}{unit}" if number and unit else unit
+        condition = item.get("condition")
+        if condition:
+            text += f"（{condition}）"
+        if text:
+            items.append(text)
+    return "，".join(items)
+
+
+def _spell_range_text(value) -> str:
+    if not isinstance(value, dict):
+        return ""
+    distance = value.get("distance")
+    if isinstance(distance, dict):
+        amount = distance.get("amount")
+        distance_type = distance.get("type")
+        if amount is not None and distance_type:
+            return f"{amount}{_distance_zh(distance_type)}"
+        if distance_type:
+            return _distance_zh(distance_type)
+    range_type = value.get("type")
+    return _distance_zh(range_type) if range_type else ""
+
+
+def _spell_components_text(value) -> str:
+    if not isinstance(value, dict):
+        return ""
+    parts = []
+    if value.get("v"):
+        parts.append("言语")
+    if value.get("s"):
+        parts.append("姿势")
+    material = value.get("m")
+    if material:
+        if isinstance(material, dict):
+            material_text = material.get("text") or material.get("cost") or "材料"
+        else:
+            material_text = str(material)
+        parts.append(f"材料（{material_text}）" if material_text != "材料" else "材料")
+    return "、".join(parts)
+
+
+def _spell_duration_text(durations) -> str:
+    if not isinstance(durations, list):
+        return ""
+    items = []
+    for item in durations:
+        if not isinstance(item, dict):
+            continue
+        duration_type = item.get("type")
+        if duration_type == "instant":
+            items.append("立即")
+            continue
+        concentration = "专注，" if item.get("concentration") else ""
+        duration = item.get("duration")
+        if isinstance(duration, dict):
+            amount = duration.get("amount")
+            unit = _unit_zh(duration.get("type"))
+            text = f"{concentration}{amount}{unit}" if amount and unit else f"{concentration}{unit}"
+            if text:
+                items.append(text)
+        elif duration_type:
+            items.append(f"{concentration}{_unit_zh(duration_type)}")
+    return "，".join(items)
+
+
+def _unit_zh(value) -> str:
+    units = {
+        "action": "动作",
+        "bonus": "附赠动作",
+        "reaction": "反应",
+        "minute": "分钟",
+        "hour": "小时",
+        "day": "天",
+        "round": "轮",
+        "turn": "回合",
+        "instant": "立即",
+    }
+    return units.get(str(value), str(value or ""))
+
+
+def _distance_zh(value) -> str:
+    units = {
+        "feet": "尺",
+        "mile": "里",
+        "miles": "里",
+        "self": "自身",
+        "touch": "触及",
+        "sight": "视线",
+        "unlimited": "无限",
+        "point": "点",
+        "special": "特殊",
+    }
+    return units.get(str(value), str(value or ""))
 
 
 def _monster_chunks(doc: RuleDocument, parent_id: str) -> List[RuleChunk]:
@@ -170,4 +306,3 @@ def _clip(text: str, limit: int) -> str:
     if len(compact) <= limit:
         return compact
     return compact[: limit - 1].rstrip() + "…"
-

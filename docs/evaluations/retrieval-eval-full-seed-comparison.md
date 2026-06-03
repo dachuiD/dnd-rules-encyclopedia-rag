@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Generated at: `2026-06-03T15:49:50+08:00`
+- Generated at: `2026-06-03T16:24:21+08:00`
 - Dataset: `eval/golden_full_seed.json`
 - Data dir: `data/fvtt-cn-5etools/data`
 - Embedding index: `storage/embedding-index/full.jsonl`
@@ -11,9 +11,9 @@
 
 | Run | Total | Recall@8 | MRR | StrictDoc@8 | StrictDocMRR | Primary@1 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Token Hybrid | 31 | 74.19% | 0.5815 | 51.61% | 0.4116 | 0.4516 |
+| Token Hybrid | 31 | 74.19% | 0.5808 | 51.61% | 0.4108 | 0.4516 |
 | Embedding Hybrid | 31 | 96.77% | 0.8532 | 96.77% | 0.7349 | 0.7419 |
-| Delta | - | +22.58% | +0.2717 | +45.16% | +0.3233 | +0.2903 |
+| Delta | - | +22.58% | +0.2725 | +45.16% | +0.3241 | +0.2903 |
 
 说明：`Recall@K` 是宽松命中；`StrictDoc@K` 只统计 gold document 命中，更适合判断证据是否真的找对。
 
@@ -45,7 +45,7 @@
 | full-vrgr-dhampir-no-breath | 范瑞ichten里的吸血鬼味儿族系还需要呼吸吗？ | 变化：Top1 证据不同 | 半血裔 (VRGR / races / 半血裔 / p.16, 0.836) | 半血裔 (VRGR / races / 半血裔 / p.16, 0.986) |
 | full-eepc-aarakocra-flight-armor | 那个鸟人种族穿中甲或重甲还能飞吗？ | 改善：Top1 命中核心证据 | 重度着甲 (PHB / feats / 重度着甲 / p.167, 0.650) | 阿兰寇拉鹰人 (EEPC / races / 阿兰寇拉鹰人 / p.5, 0.774) |
 | full-mm-hydra-extra-reactions | 多头怪为什么可以有不止一个借机攻击反应？ | 改善：命中严格 gold document | 借机攻击 (PHB / actions / 借机攻击 / p.195, 0.755) | 借机攻击 (PHB / actions / 借机攻击 / p.195, 0.977) |
-| full-vgm-flail-snail-antimagic-shell | 那个有反魔法壳的蜗牛会不会把单体法术弹回施法者？ | 改善：命中严格 gold document | 魔法飞弹 (PHB / spells / 魔法飞弹 / p.257, 0.656) | 施法 (PHB / actions / 施法 / p.192, 0.772) |
+| full-vgm-flail-snail-antimagic-shell | 那个有反魔法壳的蜗牛会不会把单体法术弹回施法者？ | 改善：命中严格 gold document | 护盾术 (PHB / spells / 护盾术 / p.275, 0.686) | 施法 (PHB / actions / 施法 / p.192, 0.772) |
 
 ## Still Needs Review
 
@@ -57,4 +57,4 @@
 - `full-tce-amulet-devout-channel-divinity`：Embedding 仍需复核。Token Top1: 护符 (PHB / items / 护符 / p.151, 0.900)；Embedding Top1: 护符 (PHB / items / 护符 / p.151, 0.784)
 - `full-tce-bloodwell-vial-sorcery-points`：Embedding 仍需复核。Token Top1: 术士 (PHB / class / 术士 / p.99, 0.900)；Embedding Top1: 狗头人鳞术士 (VGM / bestiary / 狗头人鳞术士 / p.167, 0.792)
 - `full-mm-hydra-extra-reactions`：Embedding 仍需复核。Token Top1: 借机攻击 (PHB / actions / 借机攻击 / p.195, 0.755)；Embedding Top1: 借机攻击 (PHB / actions / 借机攻击 / p.195, 0.977)
-- `full-vgm-flail-snail-antimagic-shell`：Embedding 仍需复核。Token Top1: 魔法飞弹 (PHB / spells / 魔法飞弹 / p.257, 0.656)；Embedding Top1: 施法 (PHB / actions / 施法 / p.192, 0.772)
+- `full-vgm-flail-snail-antimagic-shell`：Embedding 仍需复核。Token Top1: 护盾术 (PHB / spells / 护盾术 / p.275, 0.686)；Embedding Top1: 施法 (PHB / actions / 施法 / p.192, 0.772)

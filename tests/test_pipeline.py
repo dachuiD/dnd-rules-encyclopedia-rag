@@ -98,6 +98,36 @@ class ChunkingTests(unittest.TestCase):
         self.assertTrue(any("升环施法" in chunk.embedding_text for chunk in chunks))
         self.assertTrue(all(chunk.display_text for chunk in chunks))
 
+    def test_spell_structured_rules_are_chunked_for_citation(self):
+        entry = {
+            "name": "反制法术",
+            "source": "PHB",
+            "page": 228,
+            "time": [
+                {
+                    "number": 1,
+                    "unit": "reaction",
+                    "condition": "在你看见一个距离你60尺以内的生物施放法术时进行",
+                }
+            ],
+            "range": {"type": "point", "distance": {"type": "feet", "amount": 60}},
+            "components": {"s": True},
+            "duration": [{"type": "instant"}],
+            "entries": ["你尝试中断一个生物施展法术的过程。"],
+        }
+        doc = FiveEToolsNormalizer().normalize_entry(entry, "spells")
+
+        chunks = build_chunks(doc)
+
+        metadata_chunks = [chunk for chunk in chunks if chunk.chunk_type == "spell_metadata"]
+        self.assertEqual(len(metadata_chunks), 1)
+        metadata = metadata_chunks[0]
+        self.assertIn("施法时间：1反应", metadata.display_text)
+        self.assertIn("看见", metadata.display_text)
+        self.assertIn("射程：60尺", metadata.display_text)
+        self.assertIn("构材：姿势", metadata.display_text)
+        self.assertIn("持续时间：立即", metadata.display_text)
+
 
 class RetrievalTests(unittest.TestCase):
     def test_alias_and_scope_influence_transparent_scoring(self):

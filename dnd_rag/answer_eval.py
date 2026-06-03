@@ -91,7 +91,7 @@ def evaluate_answer_quality(
         scope = item.get("scope", "core")
         response = service.ask(question, scope=scope)
         evidence = response.evidence[:top_k]
-        evidence_pack = build_evidence_pack(evidence)
+        evidence_pack = build_evidence_pack(evidence, evidence_requirements=getattr(response, "evidence_requirements", []))
         answers = {
             "closed_book": _generate_closed_book_answer(answer_llm, item),
             "evidence_only": _generate_evidence_only_answer(answer_llm, item, evidence_pack),
@@ -123,8 +123,11 @@ def evaluate_answer_quality(
     }
 
 
-def build_evidence_pack(evidence) -> str:
+def build_evidence_pack(evidence, evidence_requirements: List[Dict[str, Any]] | None = None) -> str:
     lines = []
+    requirement_lines = _render_evidence_requirements(evidence_requirements or [])
+    if requirement_lines:
+        lines.extend(requirement_lines)
     for idx, result in enumerate(evidence, 1):
         chunk = result.chunk
         citation = chunk.citation.label()
@@ -140,6 +143,27 @@ def build_evidence_pack(evidence) -> str:
             )
         )
     return "\n\n".join(lines)
+
+
+def _render_evidence_requirements(requirements: List[Dict[str, Any]]) -> List[str]:
+    if not requirements:
+        return []
+    lines = ["Evidence Requirements:"]
+    for item in requirements:
+        status = "covered" if item.get("covered") else "missing"
+        required = "required" if item.get("required") else "optional"
+        titles = "、".join(str(title) for title in item.get("evidence_titles", []) if title) or "-"
+        lines.append(
+            "- {id} | {label} | role={role} | {required} | status={status} | evidence_titles={titles}".format(
+                id=item.get("id", ""),
+                label=item.get("label", ""),
+                role=item.get("role", ""),
+                required=required,
+                status=status,
+                titles=titles,
+            )
+        )
+    return ["\n".join(lines)]
 
 
 def render_answer_eval_markdown(report: Dict[str, Any]) -> str:
@@ -233,8 +257,11 @@ def _generate_rag_product_answer(llm: LLMProvider, item: Dict[str, Any], evidenc
     return llm.answer(
         "你是中文 D&D 规则百科 RAG 产品的回答器。只能基于 evidence pack 回答。"
         "不能补充 evidence pack 之外的规则细节，即使你知道这些细节是真的。"
+        "如果 evidence pack 顶部包含 Evidence Requirements，必须先检查每个 required requirement 的 status。"
+        "只要存在 missing 的 required requirement，结论必须是证据不足，不能把缺失需求当成已覆盖。"
         "如果 evidence pack 没有直接覆盖问题核心实体、条件或例外，必须说证据不足，并列出还需要哪些证据。"
         "不得编写未被证据支持的 DC、距离、持续时间、职业能力、超魔、专长例外或房规。"
+        "适用条件和容易误判只能写 evidence pack 明示的信息；没有明示就写“证据包未覆盖”。"
         "输出结构：结论、依据、适用条件、容易误判、引用。每个关键结论必须带 [E编号]。",
         f"{_question_prompt(item)}\n\nEvidence Pack:\n{evidence_pack}",
     )

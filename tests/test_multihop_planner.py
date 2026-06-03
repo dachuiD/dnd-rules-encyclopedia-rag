@@ -149,6 +149,38 @@ class MultiHopPlannerTests(unittest.TestCase):
         self.assertIn("隐形", [item.chunk.citation.title for item in result.evidence[:3]])
         self.assertIn("盲视", [item.chunk.citation.title for item in result.evidence[:3]])
 
+    def test_bonus_action_ready_spell_marks_missing_limit_rule_without_book_evidence(self):
+        retriever = HybridRetriever(_chunks_for_entries([
+            (
+                {
+                    "name": "准备",
+                    "source": "PHB",
+                    "page": 193,
+                    "entries": ["当你准备一个法术时，你仍如常施放它但扣住其能量。一个法术必须具有1个动作的施法时间才能被准备。"],
+                },
+                "actions",
+            ),
+            (
+                {
+                    "name": "施法",
+                    "source": "PHB",
+                    "page": 192,
+                    "entries": ["每个法术都有自己的施法时间，可能需要动作、反应或更长时间。"],
+                },
+                "actions",
+            ),
+        ]))
+        planner = MultiHopEvidencePlanner(retriever)
+
+        result = planner.search("如果我这回合已经用附赠动作施法，还能用动作准备另一个法术吗？", scope=SearchScope.CORE, top_k=4)
+
+        self.assertTrue(result.is_multi_hop)
+        self.assertEqual(
+            [requirement.id for requirement in result.missing_requirements],
+            ["bonus_action_spell_limit"],
+        )
+        self.assertIn("ready_spell_mechanic", [group.requirement.id for group in result.requirement_evidence if group.covered])
+
 
 def _chunks_for_entries(entries):
     normalizer = FiveEToolsNormalizer()

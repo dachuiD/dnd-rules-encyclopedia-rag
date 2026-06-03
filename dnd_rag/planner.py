@@ -123,7 +123,7 @@ def _concepts() -> List[_Concept]:
             requirement=EvidenceRequirement(
                 id="counterspell_trigger",
                 label="反制法术触发条件",
-                query="反制法术 counterspell 中断 生物 施展法术 反应 触发条件",
+                query="反制法术 counterspell 中断 生物 施展法术 反应 触发条件 看见 60尺",
                 required_terms=["反制法术", "施展法术"],
                 preferred_categories=["spells"],
                 expected_titles=["反制法术"],
@@ -194,6 +194,36 @@ def _concepts() -> List[_Concept]:
             category_markers=["感官"],
             mechanic_markers=["不依赖视觉", "看见"],
         ),
+        _Concept(
+            requirement=EvidenceRequirement(
+                id="ready_spell_mechanic",
+                label="准备法术机制",
+                query="准备 法术 1个动作 施法时间 扣住 能量 反应 释放 专注",
+                required_terms=["准备", "法术", "1个动作", "施法时间"],
+                preferred_categories=["actions"],
+                expected_titles=["准备"],
+                role="mechanic_rule",
+            ),
+            matcher=_mentions_ready_spell,
+            entity_markers=["准备"],
+            category_markers=["动作", "法术"],
+            mechanic_markers=["准备法术", "施法时间"],
+        ),
+        _Concept(
+            requirement=EvidenceRequirement(
+                id="bonus_action_spell_limit",
+                label="附赠动作施法限制",
+                query="附赠动作 施法 同一回合 戏法 1动作 法术 限制",
+                required_terms=["附赠动作", "施法", "同一回合", "戏法"],
+                preferred_categories=["book"],
+                expected_titles=["附赠动作施法限制"],
+                role="restriction_rule",
+            ),
+            matcher=_mentions_bonus_action_spell_limit,
+            entity_markers=[],
+            category_markers=["附赠动作"],
+            mechanic_markers=["附赠动作施法", "同一回合", "戏法"],
+        ),
     ]
 
 
@@ -207,6 +237,16 @@ def _mentions_subtle_spell(query: str) -> bool:
     if "微妙法术" in query or "subtle spell" in query or "静默施法" in query:
         return True
     return "超魔" in query and ("静默" in query or "言语" in query or "姿势" in query)
+
+
+def _mentions_ready_spell(query: str) -> bool:
+    return "准备" in query and ("法术" in query or "施法" in query)
+
+
+def _mentions_bonus_action_spell_limit(query: str) -> bool:
+    has_bonus = "附赠动作" in query or "bonus action" in query
+    has_spell = "施法" in query or "法术" in query or "spell" in query
+    return has_bonus and has_spell
 
 
 def _matches_requirement(result: SearchResult, requirement: EvidenceRequirement) -> bool:

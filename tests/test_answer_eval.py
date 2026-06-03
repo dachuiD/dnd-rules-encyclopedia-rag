@@ -5,6 +5,7 @@ from pathlib import Path
 from dnd_rag.answer_eval import (
     CachedLLMProvider,
     FixedLLMProvider,
+    build_evidence_pack,
     evaluate_answer_quality,
     parse_judgment_for_test,
     render_answer_eval_markdown,
@@ -13,6 +14,35 @@ from dnd_rag.service import RagService
 
 
 class AnswerEvalTests(unittest.TestCase):
+    def test_evidence_pack_includes_requirement_coverage(self):
+        pack = build_evidence_pack(
+            [],
+            evidence_requirements=[
+                {
+                    "id": "counterspell_trigger",
+                    "label": "反制法术触发条件",
+                    "role": "trigger_rule",
+                    "required": True,
+                    "covered": True,
+                    "evidence_titles": ["反制法术"],
+                },
+                {
+                    "id": "magic_item_activation",
+                    "label": "魔法物品激活与施法机制",
+                    "role": "mechanic_rule",
+                    "required": True,
+                    "covered": False,
+                    "evidence_titles": [],
+                },
+            ],
+        )
+
+        self.assertIn("Evidence Requirements", pack)
+        self.assertIn("反制法术触发条件", pack)
+        self.assertIn("covered", pack)
+        self.assertIn("魔法物品激活与施法机制", pack)
+        self.assertIn("missing", pack)
+
     def test_rag_product_prompt_requires_evidence_sufficiency_and_no_outside_rules(self):
         class CaptureProvider:
             def __init__(self):
@@ -49,6 +79,9 @@ class AnswerEvalTests(unittest.TestCase):
         self.assertIn("不能补充 evidence pack 之外", rag_system_prompt)
         self.assertIn("证据不足", rag_system_prompt)
         self.assertIn("不得编写未被证据支持的 DC", rag_system_prompt)
+        self.assertIn("Evidence Requirements", rag_system_prompt)
+        self.assertIn("missing 的 required requirement", rag_system_prompt)
+        self.assertIn("适用条件和容易误判只能写 evidence pack 明示的信息", rag_system_prompt)
 
     def test_answer_quality_eval_generates_three_variants_and_scores_them(self):
         service = RagService.from_sample_data()

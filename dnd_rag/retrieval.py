@@ -111,7 +111,7 @@ class HybridRetriever:
             category_score = self._category_route_score(chunk, normalized_query)
             title_score = max(self._title_score(chunk, normalized_query), category_score)
             source_score = 1.0 if chunk.source_id in CORE_SOURCES else 0.3
-            structure_score = 1.0 if chunk.chunk_type in {"rule", "definition", "spell_description", "feature"} else 0.5
+            structure_score = 1.0 if chunk.chunk_type in {"rule", "definition", "spell_description", "spell_metadata", "feature"} else 0.5
             score = EvidenceScore(
                 dense_score=dense_scores.get(chunk.id, 0.0),
                 lexical_score=lexical_scores.get(chunk.id, 0.0),
