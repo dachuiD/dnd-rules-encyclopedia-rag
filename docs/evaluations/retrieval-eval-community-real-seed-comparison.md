@@ -1,4 +1,4 @@
-# Community Real Seed Token vs Embedding Review
+# 社区真实候选题 Token vs Embedding 检索审阅
 
 ## Metadata
 
@@ -6,6 +6,21 @@
 - Dataset: `eval/community_real_seed.json`
 - Data dir: `data/fvtt-cn-5etools/data`
 - Embedding index: `storage/embedding-index/full.jsonl`
+
+## 审计结论
+
+这份报告目前只能作为候选压力测试，不能作为最终产品效果证明。
+
+原因：
+
+- 12 道题的 `source_status` 都是 `candidate_unverified`，社区来源还没有逐题人工核验。
+- 当前 `Recall@8` 是宽松指标，只要 Top8 里出现预期文档或预期词，就会算命中。
+- 因此可能出现 Top1 不理想但整体指标仍显示“改善”的情况。
+- `community-rpgse-subtle-counterspell` 和 `community-rpgse-magic-item-counterspell` 就属于需要重点复核的案例：Top1 是 `反魔法结界`，但预期核心证据应包含 `反制法术`。
+
+当前可接受的使用方式：观察 embedding 是否整体改善召回，并收集失败类型。
+
+当前不可接受的使用方式：直接声明产品已经在社区真实题上显著优于通用大模型。
 
 ## Metrics
 

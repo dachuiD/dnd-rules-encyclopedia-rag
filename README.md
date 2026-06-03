@@ -172,6 +172,8 @@ python3 scripts/dnd_rag_cli.py eval-summary \
   --out docs/evaluations/retrieval-eval-community-real-seed-comparison.md
 ```
 
+社区真实题当前是候选集，`source_status` 为 `candidate_unverified` 的题目只能用于压力测试和失败类型分析，不能直接作为最终产品宣传指标。正式评测前需要核验社区来源、收紧 gold evidence，并区分宽松 `Recall@8` 与严格证据命中。
+
 `storage/` 默认不进入 Git。这里面会保存模型输出向量，也可能间接暴露授权数据的语义内容，只适合本地调试和评测。
 
 `reports/` 默认不进入 Git，用于保存本地原始运行结果；`docs/evaluations/` 用于保存筛选后的可读评测归档，包含题目、参考答案、来源证据、分数解释和对比结论。

@@ -1,112 +1,142 @@
-# RAG vs General LLM Evaluation Protocol
+# RAG vs 通用大模型评测协议
 
-Goal: show whether this product answers D&D rules questions better than a general-purpose LLM without retrieval.
+目标：证明这个产品在 D&D 规则问答上，不只是“回答得像”，而是在正确性、证据支撑、引用追溯和不确定性处理上，比通用大模型更可靠。
 
-The comparison should not be “which answer sounds nicer”. A good rules product must be correct, grounded, traceable, and appropriately cautious.
+先明确一个重要口径：
 
-## Systems To Compare
+- “通用大模型无联网”不是完整的真实使用场景，但它是必要的封闭知识基线。它用来隔离“检索增强到底带来了什么”。
+- “通用大模型联网/搜索”更接近用户真实使用方式，但搜索结果会随时间、地区、平台策略变化，稳定性和可复现实验难度更高。
+- 因此正式报告应分两层：先做封闭知识对照，证明 RAG 的证据增强价值；再做联网对照，证明产品在真实搜索场景下仍有优势。
 
-| System | Description |
-| --- | --- |
-| General LLM | Same generation model, no retrieval evidence, asked to answer from its own knowledge. |
-| RAG Answer | Same generation model, with evidence pack from our retrieval pipeline. |
-| RAG With Citations | Same as RAG Answer, but evaluation also checks displayed citations and source support. |
+## 对比系统
 
-Use the same model family when possible. Otherwise the benchmark mixes “model quality” and “retrieval product quality”.
-
-## Question Sets
-
-Use three groups:
-
-1. Core rules: PHB/DMG/MM questions.
-2. Full rules: expansions, feats, spells, monsters, items, races, optional features.
-3. Community-real questions: paraphrased from real forum/StackExchange questions with source URLs.
-
-The community-real group should be the main product benchmark because it contains ambiguity, colloquial phrasing, mixed terminology, and edge cases.
-
-## Metrics
-
-| Metric | What It Measures | Why It Matters |
+| 系统 | 目的 | 说明 |
 | --- | --- | --- |
-| Answer Correctness | Whether the final ruling is right. | Main user value. |
-| Evidence Support | Whether each key claim is supported by retrieved evidence. | Prevents confident hallucination. |
-| Citation Accuracy | Whether citations actually support the cited sentence. | Product trust and interview demo value. |
-| Completeness | Whether the answer includes important conditions/exceptions. | Rules answers often fail by omission. |
-| Abstention | Whether the system says “evidence insufficient” when needed. | Better than fabricated certainty. |
-| DM-Caution | Whether table-ruling parts are separated from written rules. | Critical for D&D rules culture. |
-| User Preference | Blind A/B human preference. | Captures readability and usefulness. |
+| 通用大模型，无联网 | 封闭知识基线 | 同一个生成模型，不给检索证据，让它凭模型内知识回答。用于衡量 RAG 相比“裸模型”的提升。 |
+| 通用大模型，联网/搜索 | 真实使用基线 | 允许模型搜索公开网页。用于衡量产品相比普通用户真实使用方式的优势。 |
+| 通用大模型，同证据包 | 生成能力控制组 | 给模型同一份 evidence pack，但不使用我们的产品界面和引用格式。用于区分“检索做得好”还是“生成模型本来会答”。 |
+| 本产品 RAG | 产品方案 | 使用我们的检索、打分、证据包、引用和回答模板。 |
 
-## Suggested Scoring Rubric
+优先使用同一模型族做对比。例如 DeepSeek 无检索 vs DeepSeek + 本产品 RAG。否则评测会混入“模型本身强弱”的影响。
 
-Each answer receives 0-2 points per dimension:
+## 为什么仍然保留无联网对照
 
-| Dimension | 0 | 1 | 2 |
+无联网对照不是为了模拟所有用户行为，而是为了回答一个工程问题：
+
+> 当模型本身可能记错、漏掉或混淆规则时，结构化检索和引用能带来多少增益？
+
+它适合证明：
+
+- RAG 是否减少幻觉；
+- RAG 是否让关键结论可追溯；
+- RAG 是否能覆盖模型记忆中没有的扩展内容；
+- RAG 是否在证据不足时更愿意拒答或保守回答。
+
+但它不适合单独证明：
+
+- 产品一定比所有联网 AI 更强；
+- 产品一定比搜索引擎更快找到答案；
+- 产品在所有社区边缘问题上都更可靠。
+
+所以简历和演示里可以这样讲：
+
+> 我们先用无联网通用模型作为封闭知识基线，隔离检索增强的贡献；再用联网通用模型作为真实使用基线，比较证据质量、引用准确性和规则裁判可用性。
+
+## 题目分组
+
+| 分组 | 用途 |
+| --- | --- |
+| 核心规则题 | 验证 PHB、DMG、MM 的基础规则召回与裁判答案。 |
+| 全量规则题 | 验证扩展法术、专长、物品、种族、怪物等内容。 |
+| 社区真实题 | 验证口语化、边缘情况、多跳规则组合和中英术语差异。 |
+| 证据不足题 | 验证系统是否会保守回答，而不是编造规则。 |
+
+社区真实题应该是最终最有说服力的产品评测，但必须完成来源核验、gold evidence 标注和人工审阅后，才能作为正式指标。
+
+## 评分维度
+
+| 指标 | 衡量什么 | 为什么重要 |
+| --- | --- | --- |
+| 正确性 | 最终规则裁定是否正确。 | 用户真正需要的是能执行的答案。 |
+| 证据支撑 | 关键结论是否有检索证据支持。 | 防止“说得很顺但没有依据”。 |
+| 引用准确性 | 引用是否真的支持对应句子。 | 这是规则百科产品的信任基础。 |
+| 完整性 | 是否覆盖重要条件、例外和限制。 | D&D 规则错误常来自遗漏限定条件。 |
+| 保守性 | 证据不足时是否说明不足。 | 比强行回答更可靠。 |
+| DM 裁定意识 | 是否区分 RAW、解释和需要 DM 裁定的部分。 | 符合 D&D 规则讨论习惯。 |
+| 可读性 | 是否直接、清晰、可执行。 | 用户体验不能只靠“有引用”。 |
+
+## 人工评分表
+
+每个维度 0-2 分：
+
+| 维度 | 0 分 | 1 分 | 2 分 |
 | --- | --- | --- | --- |
-| Correctness | Wrong or misleading | Partly correct | Correct ruling |
-| Grounding | Unsupported claims | Some support | Key claims supported |
-| Citation | Missing/wrong | Partly relevant | Directly supports answer |
-| Completeness | Misses core caveat | Minor omissions | Covers conditions/exceptions |
-| Clarity | Hard to act on | Understandable | Direct and actionable |
+| 正确性 | 错误或误导 | 部分正确 | 裁定正确 |
+| 证据支撑 | 无支撑 | 部分支撑 | 关键结论均有支撑 |
+| 引用准确性 | 缺失或错误 | 部分相关 | 直接支持结论 |
+| 完整性 | 遗漏核心限制 | 有小遗漏 | 覆盖条件和例外 |
+| 清晰度 | 难以执行 | 能理解 | 直接、简洁、可执行 |
 
-Maximum: 10 points.
+满分 10 分。
 
-For interview-friendly reporting, also show win/tie/loss:
+报告中同时给出 win/tie/loss：
 
-- RAG wins if it scores at least 2 points higher than General LLM.
-- Tie if score difference is -1, 0, or +1.
-- General LLM wins if it scores at least 2 points higher.
+- RAG 比基线高 2 分及以上：RAG 胜。
+- 分差在 -1、0、+1：平。
+- RAG 比基线低 2 分及以上：基线胜。
 
-## Blind Review Flow
+## 盲评流程
 
-1. Select a question from the eval set.
-2. Generate Answer A from General LLM without retrieval.
-3. Generate Answer B from RAG with evidence.
-4. Hide system identity and randomize order.
-5. Reviewer scores both with the rubric.
-6. Separately verify whether cited evidence supports claims.
-7. Record win/tie/loss and failure reason.
+1. 从评测集中抽取一道题。
+2. 生成通用大模型答案。
+3. 生成本产品 RAG 答案。
+4. 隐藏系统身份并随机打乱顺序。
+5. 审阅者按评分表打分。
+6. 单独检查引用是否支持答案。
+7. 记录胜/平/负、失败原因和代表性案例。
 
-Keep the original community source URL, but paraphrase the question in the dataset. Do not copy long community answers into the repo.
+社区题可以保留原始来源 URL，但题目应转写成中文自然问法。不要把社区长答案整段复制进仓库。
 
-## LLM-as-Judge Use
+## LLM-as-Judge 的使用边界
 
-LLM-as-judge can speed up triage, but should not be the final authority for rules correctness.
+LLM-as-Judge 可以用于提速，但不能作为最终规则正确性的唯一裁判。
 
-Use it for:
+适合用它做：
 
-- first-pass scoring;
-- finding unsupported claims;
-- classifying failure reasons;
-- summarizing disagreements.
+- 初步评分；
+- 找出疑似无证据结论；
+- 归类失败原因；
+- 总结 RAG 与基线答案差异。
 
-Human review is required for:
+必须人工确认的部分：
 
-- final correctness labels;
-- edge-case rulings;
-- citation support decisions;
-- benchmark numbers used in portfolio claims.
+- 最终规则裁定；
+- 边缘案例；
+- 引用是否真的支持结论；
+- 用于简历或作品集宣传的正式指标。
 
-## Report Shape
+## 报告形态
 
-The useful report is compact:
+正式报告应该短而清楚：
 
-- headline win/tie/loss;
-- average rubric score by system;
-- top failure categories;
-- 5 good examples where RAG wins;
-- 5 bad examples where RAG loses;
-- next tuning actions.
+- 总体胜/平/负；
+- 平均分；
+- 各维度得分；
+- 主要失败类型；
+- RAG 获胜的代表案例；
+- RAG 失败的代表案例；
+- 下一轮调参动作。
 
-Avoid long evidence dumps in the review report. Keep detailed evidence reports as debug artifacts only.
+详细证据和 Top8 检索列表保留为调试材料，不放在主报告里堆砌。
 
-## Product Claim Template
+## 可使用的产品表述
 
-Use careful claims:
+谨慎表述：
 
-> On a curated set of community-real D&D 5e rules questions, the RAG system improved evidence-grounded answer quality over the same model without retrieval, especially on expansion content and citation traceability.
+> 在经过人工核验的 D&D 5e 社区真实问题集上，本产品相比同模型无检索基线，提升了证据支撑型回答质量；相比联网通用模型，优势主要体现在引用可追溯、规则来源稳定、回答结构更适合裁判使用。
 
-Avoid overclaiming:
+避免过度表述：
 
-> This system is always more accurate than general LLMs.
+> 本系统总是比通用大模型更准确。
 
-That claim would require a larger benchmark, multiple model baselines, and independent human review.
+这种说法需要更大规模题集、多模型基线、联网基线和独立人工审阅，当前 V1 不应这样宣传。
