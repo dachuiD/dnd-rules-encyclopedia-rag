@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Generated at: `2026-06-03T11:59:03+08:00`
+- Generated at: `2026-06-03T15:49:50+08:00`
 - Dataset: `eval/golden_full_seed.json`
 - Data dir: `data/fvtt-cn-5etools/data`
 - Embedding index: `storage/embedding-index/full.jsonl`

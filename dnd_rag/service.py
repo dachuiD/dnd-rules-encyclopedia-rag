@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 from .adapters import FiveEToolsCnAdapter
 from .chunking import build_chunks
 from .models import RuleChunk, RuleDocument, SearchResult, SearchScope
+from .planner import MultiHopEvidencePlanner, MultiHopSearchResult
 from .providers import EmbeddingProvider
 from .retrieval import HybridRetriever
 
@@ -20,6 +21,10 @@ class AskResponse:
     related_entries: List[RuleDocument]
     evidence: List[SearchResult]
     mode: str
+    is_multi_hop: bool = False
+    coverage_score: float = 0.0
+    missing_requirements: List[str] = field(default_factory=list)
+    evidence_requirements: List[Dict[str, object]] = field(default_factory=list)
 
 
 class RagService:
@@ -38,6 +43,7 @@ class RagService:
             chunk_embeddings=chunk_embeddings,
             embedding_provider=embedding_provider,
         )
+        self.planner = MultiHopEvidencePlanner(self.retriever)
 
     @classmethod
     def from_adapter(cls, adapter: FiveEToolsCnAdapter) -> "RagService":
@@ -51,11 +57,13 @@ class RagService:
 
     def ask(self, question: str, scope: str = "core") -> AskResponse:
         search_scope = SearchScope.FULL if scope == "full" else SearchScope.CORE
-        evidence = self.retriever.search(question, scope=search_scope, top_k=8)
+        planned = self.planner.search(question, scope=search_scope, top_k=8)
+        evidence = planned.evidence
         related = self._related_entries(evidence)
-        direct_answer = self._direct_answer(question, search_scope, evidence)
+        missing_requirements = [requirement.label for requirement in planned.missing_requirements]
+        direct_answer = self._direct_answer(question, search_scope, evidence, missing_requirements)
         supporting_points = self._supporting_points(evidence)
-        caveats = self._caveats(question, evidence)
+        caveats = self._caveats(question, evidence, missing_requirements)
         answer = self._template_answer(question, search_scope, evidence, direct_answer, supporting_points, caveats)
         citations = self._grouped_citations(evidence)
         return AskResponse(
@@ -67,6 +75,10 @@ class RagService:
             related_entries=related,
             evidence=evidence,
             mode=search_scope.value,
+            is_multi_hop=planned.is_multi_hop,
+            coverage_score=planned.coverage_score,
+            missing_requirements=missing_requirements,
+            evidence_requirements=self._evidence_requirements(planned),
         )
 
     def entry(self, document_id: str) -> RuleDocument | None:
@@ -163,7 +175,17 @@ class RagService:
             )
         return list(grouped.values())
 
-    def _direct_answer(self, question: str, scope: SearchScope, evidence: List[SearchResult]) -> str:
+    def _direct_answer(
+        self,
+        question: str,
+        scope: SearchScope,
+        evidence: List[SearchResult],
+        missing_requirements: List[str] | None = None,
+    ) -> str:
+        missing_requirements = missing_requirements or []
+        if missing_requirements:
+            missing = "、".join(missing_requirements)
+            return f"当前证据不足，缺少必要证据：{missing}。不能可靠完成这个复合裁定。"
         if not evidence:
             return "当前资料没有检索到足够依据，不能可靠裁定。建议切换到全量模式或补充更具体的问题。"
         corpus = " ".join(result.chunk.text for result in evidence[:5])
@@ -192,7 +214,15 @@ class RagService:
             points.append(text)
         return points[:4]
 
-    def _caveats(self, question: str, evidence: List[SearchResult]) -> List[str]:
+    def _caveats(
+        self,
+        question: str,
+        evidence: List[SearchResult],
+        missing_requirements: List[str] | None = None,
+    ) -> List[str]:
+        missing_requirements = missing_requirements or []
+        if missing_requirements:
+            return [f"缺少证据需求：{'、'.join(missing_requirements)}。"]
         if not evidence:
             return ["没有足够证据时不要硬答。"]
         corpus = " ".join(result.chunk.text for result in self._answer_evidence(evidence))
@@ -206,3 +236,18 @@ class RagService:
         if not caveats:
             caveats.append("请以引用片段覆盖的条件为准。")
         return caveats[:3]
+
+    def _evidence_requirements(self, planned: MultiHopSearchResult) -> List[Dict[str, object]]:
+        items: List[Dict[str, object]] = []
+        for group in planned.requirement_evidence:
+            items.append(
+                {
+                    "id": group.requirement.id,
+                    "label": group.requirement.label,
+                    "role": group.requirement.role,
+                    "required": group.requirement.required,
+                    "covered": group.covered,
+                    "evidence_titles": [result.chunk.citation.title for result in group.evidence],
+                }
+            )
+        return items

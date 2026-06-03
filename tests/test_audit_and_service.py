@@ -2,8 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from dnd_rag.adapters import FiveEToolsCnAdapter
+from dnd_rag.adapters import FiveEToolsCnAdapter, FiveEToolsNormalizer
 from dnd_rag.audit import audit_source_tree
+from dnd_rag.chunking import build_chunks
 from dnd_rag.service import RagService
 
 
@@ -50,6 +51,49 @@ class AuditAndServiceTests(unittest.TestCase):
         self.assertIn("不会自动中断", response.direct_answer)
         self.assertTrue(any("体质豁免" in point for point in response.supporting_points))
 
+    def test_service_exposes_multihop_evidence_coverage_for_compound_rulings(self):
+        service = _service_for_entries([
+            (
+                {
+                    "name": "反制法术",
+                    "source": "PHB",
+                    "page": 228,
+                    "entries": ["你试图中断一个生物施展法术的过程。"],
+                },
+                "spells",
+            ),
+            (
+                {
+                    "name": "激活物品",
+                    "source": "DMG",
+                    "page": 141,
+                    "entries": ["一些魔法物品允许使用者从物品中施展法术。该法术无需构材。"],
+                },
+                "actions",
+            ),
+            (
+                {
+                    "name": "反魔法结界",
+                    "source": "PHB",
+                    "page": 213,
+                    "entries": ["一个反魔法区域会压制法术和其他魔法效果。"],
+                },
+                "spells",
+            ),
+        ])
+
+        response = service.ask("用魔法物品施法能被反制法术吗？", scope="core")
+
+        self.assertTrue(response.is_multi_hop)
+        self.assertEqual(response.coverage_score, 1.0)
+        self.assertEqual(response.missing_requirements, [])
+        self.assertEqual(
+            {item["id"] for item in response.evidence_requirements if item["covered"]},
+            {"counterspell_trigger", "magic_item_activation"},
+        )
+        self.assertIn("反制法术", [item.chunk.citation.title for item in response.evidence[:3]])
+        self.assertIn("激活物品", [item.chunk.citation.title for item in response.evidence[:3]])
+
 
 class AdapterTests(unittest.TestCase):
     def test_sample_adapter_loads_documents_and_chunks(self):
@@ -63,3 +107,10 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _service_for_entries(entries):
+    normalizer = FiveEToolsNormalizer()
+    docs = [normalizer.normalize_entry(entry, category) for entry, category in entries]
+    chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+    return RagService(docs, chunks)
