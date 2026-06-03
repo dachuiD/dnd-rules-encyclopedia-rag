@@ -13,6 +13,43 @@ from dnd_rag.service import RagService
 
 
 class AnswerEvalTests(unittest.TestCase):
+    def test_rag_product_prompt_requires_evidence_sufficiency_and_no_outside_rules(self):
+        class CaptureProvider:
+            def __init__(self):
+                self.calls = []
+
+            def answer(self, system_prompt, user_prompt):
+                self.calls.append((system_prompt, user_prompt))
+                return "captured answer"
+
+        service = RagService.from_sample_data()
+        answer_llm = CaptureProvider()
+        judge = FixedLLMProvider(
+            response='{"scores":{"correctness":1,"completeness":1,"evidence_support":1,'
+            '"citation_accuracy":1,"caution":1,"clarity":1,"memory_contamination":1},'
+            '"total":7,"verdict":"tie","reasons":["captured"]}'
+        )
+
+        evaluate_answer_quality(
+            service,
+            [
+                {
+                    "id": "q1",
+                    "question_zh": "法师挨打后专注会立刻断吗？",
+                    "scope": "core",
+                    "reference_answer": "不会自动中断。",
+                }
+            ],
+            answer_llm=answer_llm,
+            judge_llm=judge,
+            top_k=3,
+        )
+
+        rag_system_prompt = answer_llm.calls[2][0]
+        self.assertIn("不能补充 evidence pack 之外", rag_system_prompt)
+        self.assertIn("证据不足", rag_system_prompt)
+        self.assertIn("不得编写未被证据支持的 DC", rag_system_prompt)
+
     def test_answer_quality_eval_generates_three_variants_and_scores_them(self):
         service = RagService.from_sample_data()
         questions = [

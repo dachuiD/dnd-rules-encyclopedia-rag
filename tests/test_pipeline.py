@@ -135,6 +135,173 @@ class RetrievalTests(unittest.TestCase):
         self.assertTrue(any("别名命中" in reason for reason in results[0].score.reasons))
         self.assertTrue(all(result.chunk.source_id in {"PHB", "DMG", "MM"} for result in results))
 
+    def test_effect_alias_recalls_spell_title_for_initiative_d8(self):
+        normalizer = FiveEToolsNormalizer()
+        docs = [
+            normalizer.normalize_entry(
+                {
+                    "name": "灵敏之赐",
+                    "ENG_name": "Gift of Alacrity",
+                    "source": "EGW",
+                    "page": 186,
+                    "entries": ["目标在持续时间内进行先攻掷骰时，可以加入1d8。"],
+                },
+                "spells",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "激活物品",
+                    "source": "DMG",
+                    "page": 141,
+                    "entries": ["一些魔法物品可以让其使用者从物品中施展法术。"],
+                },
+                "actions",
+            ),
+        ]
+        chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+        retriever = HybridRetriever(chunks)
+
+        results = retriever.search("有没有扩展法术能让先攻多加 1d8？", scope=SearchScope.FULL, top_k=3)
+
+        self.assertEqual(results[0].chunk.document_id, docs[0].id)
+        self.assertGreater(results[0].score.alias_score, 0)
+
+    def test_colloquial_race_alias_recalls_dhampir_instead_of_vampire(self):
+        normalizer = FiveEToolsNormalizer()
+        docs = [
+            normalizer.normalize_entry(
+                {
+                    "name": "半血裔",
+                    "ENG_name": "Dhampir",
+                    "source": "VRGR",
+                    "page": 16,
+                    "entries": ["你不需要呼吸。"],
+                },
+                "races",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "吸血鬼",
+                    "ENG_name": "Vampire",
+                    "source": "MM",
+                    "page": 297,
+                    "entries": ["吸血鬼可以变化为蝙蝠或迷雾。"],
+                },
+                "bestiary",
+            ),
+        ]
+        chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+        retriever = HybridRetriever(chunks)
+
+        results = retriever.search("吸血鬼味儿族系还需要呼吸吗？", scope=SearchScope.FULL, top_k=3)
+
+        self.assertEqual(results[0].chunk.document_id, docs[0].id)
+        self.assertGreater(results[0].score.alias_score, 0)
+
+    def test_english_counterspell_alias_recalls_counterspell(self):
+        normalizer = FiveEToolsNormalizer()
+        docs = [
+            normalizer.normalize_entry(
+                {
+                    "name": "反制法术",
+                    "ENG_name": "Counterspell",
+                    "source": "PHB",
+                    "page": 228,
+                    "entries": ["你试图中断一个生物施展法术的过程。"],
+                },
+                "spells",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "反魔法结界",
+                    "ENG_name": "Antimagic Field",
+                    "source": "PHB",
+                    "page": 213,
+                    "entries": ["一个10尺半径的隐形反魔法球体环绕着你。"],
+                },
+                "spells",
+            ),
+        ]
+        chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+        retriever = HybridRetriever(chunks)
+
+        results = retriever.search("Can subtle spell avoid counterspell?", scope=SearchScope.CORE, top_k=3)
+
+        self.assertEqual(results[0].chunk.document_id, docs[0].id)
+        self.assertGreater(results[0].score.alias_score, 0)
+
+    def test_exact_title_mention_beats_same_category_semantic_noise(self):
+        normalizer = FiveEToolsNormalizer()
+        docs = [
+            normalizer.normalize_entry(
+                {
+                    "name": "反制法术",
+                    "source": "PHB",
+                    "page": 228,
+                    "entries": ["你试图中断一个生物施展法术的过程。"],
+                },
+                "spells",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "反魔法结界",
+                    "source": "PHB",
+                    "page": 213,
+                    "entries": ["球体内法术和其他魔法效果会被压制，法术无法被施展。"],
+                },
+                "spells",
+            ),
+        ]
+        chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+        retriever = HybridRetriever(chunks)
+
+        results = retriever.search("能被反制法术反制吗？", scope=SearchScope.CORE, top_k=2)
+
+        self.assertEqual(results[0].chunk.document_id, docs[0].id)
+        self.assertGreater(results[0].score.alias_score, 0)
+
+    def test_category_routing_boosts_requested_feat_category(self):
+        normalizer = FiveEToolsNormalizer()
+        docs = [
+            normalizer.normalize_entry(
+                {
+                    "name": "大厨",
+                    "ENG_name": "Chef",
+                    "source": "TCE",
+                    "page": 79,
+                    "entries": ["短休结束时，吃了料理并花费生命骰的生物额外恢复1d8生命值。"],
+                },
+                "feats",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "治疗师",
+                    "ENG_name": "Healer",
+                    "source": "PHB",
+                    "page": 167,
+                    "entries": ["你可以使用治疗包让一个生物恢复生命值。"],
+                },
+                "feats",
+            ),
+            normalizer.normalize_entry(
+                {
+                    "name": "疗愈",
+                    "source": "DMG",
+                    "page": 266,
+                    "entries": ["角色可以在短休时恢复生命骰。"],
+                },
+                "actions",
+            ),
+        ]
+        chunks = [chunk for doc in docs for chunk in build_chunks(doc)]
+        retriever = HybridRetriever(chunks)
+
+        results = retriever.search("哪个专长能在短休做饭，让花生命骰的人额外回血？", scope=SearchScope.FULL, top_k=3)
+
+        self.assertIn(results[0].chunk.document_id, {docs[0].id, docs[1].id})
+        self.assertNotEqual(results[0].chunk.document_id, docs[2].id)
+        self.assertTrue(any("类别路由" in reason for reason in results[0].score.reasons))
+
 
 if __name__ == "__main__":
     unittest.main()

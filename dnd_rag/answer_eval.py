@@ -232,6 +232,9 @@ def _generate_evidence_only_answer(llm: LLMProvider, item: Dict[str, Any], evide
 def _generate_rag_product_answer(llm: LLMProvider, item: Dict[str, Any], evidence_pack: str) -> str:
     return llm.answer(
         "你是中文 D&D 规则百科 RAG 产品的回答器。只能基于 evidence pack 回答。"
+        "不能补充 evidence pack 之外的规则细节，即使你知道这些细节是真的。"
+        "如果 evidence pack 没有直接覆盖问题核心实体、条件或例外，必须说证据不足，并列出还需要哪些证据。"
+        "不得编写未被证据支持的 DC、距离、持续时间、职业能力、超魔、专长例外或房规。"
         "输出结构：结论、依据、适用条件、容易误判、引用。每个关键结论必须带 [E编号]。",
         f"{_question_prompt(item)}\n\nEvidence Pack:\n{evidence_pack}",
     )

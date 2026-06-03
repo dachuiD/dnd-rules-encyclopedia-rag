@@ -22,8 +22,31 @@ DEFAULT_ALIASES = {
     "挨打": "受到伤害",
     "打了一下": "受到伤害",
     "立刻断": "专注",
+    "先攻多加 1d8": "灵敏之赐",
+    "先攻加 1d8": "灵敏之赐",
+    "先攻 1d8": "灵敏之赐",
+    "吸血鬼味儿族系": "半血裔",
+    "吸血鬼味儿种族": "半血裔",
+    "吸血鬼族系": "半血裔",
+    "counterspell": "反制法术",
+    "subtle spell": "微妙法术",
     "oa": "借机攻击",
     "opportunity attack": "借机攻击",
+}
+
+CATEGORY_ROUTES = {
+    "专长": {"feats"},
+    "法术": {"spells"},
+    "种族": {"races"},
+    "族系": {"races"},
+    "怪物": {"bestiary"},
+    "生物": {"bestiary"},
+    "魔法物品": {"items"},
+    "物品": {"items"},
+    "装备": {"items"},
+    "动作": {"actions"},
+    "状态": {"conditions", "conditionsdiseases"},
+    "战技": {"optionalfeatures"},
 }
 
 
@@ -83,8 +106,10 @@ class HybridRetriever:
         results: List[SearchResult] = []
 
         for chunk in scoped:
-            alias_score = self._alias_score(chunk, matched_aliases)
-            title_score = self._title_score(chunk, normalized_query)
+            exact_title_score = self._exact_title_score(chunk, normalized_query)
+            alias_score = max(self._alias_score(chunk, matched_aliases), exact_title_score)
+            category_score = self._category_route_score(chunk, normalized_query)
+            title_score = max(self._title_score(chunk, normalized_query), category_score)
             source_score = 1.0 if chunk.source_id in CORE_SOURCES else 0.3
             structure_score = 1.0 if chunk.chunk_type in {"rule", "definition", "spell_description", "feature"} else 0.5
             score = EvidenceScore(
@@ -104,7 +129,7 @@ class HybridRetriever:
                 + weights["source"] * score.source_score
                 + weights["structure"] * score.structure_score
             )
-            score.reasons = self._reasons(chunk, score, matched_aliases)
+            score.reasons = self._reasons(chunk, score, matched_aliases, category_score, exact_title_score)
             if score.final_score > 0:
                 results.append(SearchResult(chunk=chunk, score=score))
 
@@ -144,7 +169,27 @@ class HybridRetriever:
             return 1.0
         return 0.0
 
-    def _reasons(self, chunk: RuleChunk, score: EvidenceScore, matched_aliases: Dict[str, str]) -> List[str]:
+    def _exact_title_score(self, chunk: RuleChunk, query: str) -> float:
+        query_lower = query.lower()
+        for alias in chunk.aliases:
+            if alias and alias.lower() in query_lower:
+                return 1.0
+        return 0.0
+
+    def _category_route_score(self, chunk: RuleChunk, query: str) -> float:
+        for marker, categories in CATEGORY_ROUTES.items():
+            if marker in query and chunk.category in categories:
+                return 0.35
+        return 0.0
+
+    def _reasons(
+        self,
+        chunk: RuleChunk,
+        score: EvidenceScore,
+        matched_aliases: Dict[str, str],
+        category_score: float = 0.0,
+        exact_title_score: float = 0.0,
+    ) -> List[str]:
         reasons: List[str] = []
         if score.dense_score > 0:
             reasons.append(f"语义相似 {score.dense_score:.2f}")
@@ -156,6 +201,10 @@ class HybridRetriever:
                 reasons.append(f"别名命中：{alias} -> {canonical}")
         if score.title_score > 0:
             reasons.append("标题/条目名命中")
+        if exact_title_score > 0:
+            reasons.append("精确条目名命中")
+        if category_score > 0:
+            reasons.append(f"类别路由：{chunk.category}")
         if chunk.source_id in CORE_SOURCES:
             reasons.append(f"核心来源：{chunk.source_id}")
         reasons.append(f"结构类型：{chunk.chunk_type}")
