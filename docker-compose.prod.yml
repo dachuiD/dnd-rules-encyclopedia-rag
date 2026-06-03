@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+    env_file:
+      - ${RAG_ENV_FILE:-/opt/dnd-rag/.env.production}
+    ports:
+      - "8000:8000"
+    volumes:
+      - /opt/dnd-rag/data:/opt/dnd-rag/data:ro
+      - /opt/dnd-rag/storage:/opt/dnd-rag/storage:ro
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"

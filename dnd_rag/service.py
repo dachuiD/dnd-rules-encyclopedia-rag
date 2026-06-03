@@ -7,7 +7,7 @@ from .adapters import FiveEToolsCnAdapter
 from .chunking import build_chunks
 from .models import RuleChunk, RuleDocument, SearchResult, SearchScope
 from .planner import MultiHopEvidencePlanner, MultiHopSearchResult
-from .providers import EmbeddingProvider
+from .providers import EmbeddingProvider, LLMProvider
 from .retrieval import HybridRetriever
 
 
@@ -34,13 +34,17 @@ class RagService:
         chunks: List[RuleChunk],
         chunk_embeddings: Dict[str, List[float]] | None = None,
         embedding_provider: EmbeddingProvider | None = None,
+        llm_provider: LLMProvider | None = None,
     ) -> None:
         self.documents = documents
         self.chunks = chunks
+        self.chunk_embeddings = chunk_embeddings or {}
+        self.embedding_provider = embedding_provider
+        self.llm_provider = llm_provider
         self.documents_by_id = {doc.id: doc for doc in documents}
         self.retriever = HybridRetriever(
             chunks,
-            chunk_embeddings=chunk_embeddings,
+            chunk_embeddings=self.chunk_embeddings,
             embedding_provider=embedding_provider,
         )
         self.planner = MultiHopEvidencePlanner(self.retriever)
@@ -61,10 +65,13 @@ class RagService:
         evidence = planned.evidence
         related = self._related_entries(evidence)
         missing_requirements = [requirement.label for requirement in planned.missing_requirements]
+        evidence_requirements = self._evidence_requirements(planned)
         direct_answer = self._direct_answer(question, search_scope, evidence, missing_requirements)
         supporting_points = self._supporting_points(evidence)
         caveats = self._caveats(question, evidence, missing_requirements)
         answer = self._template_answer(question, search_scope, evidence, direct_answer, supporting_points, caveats)
+        if self.llm_provider:
+            answer = self._llm_answer(question, search_scope, evidence, evidence_requirements)
         citations = self._grouped_citations(evidence)
         return AskResponse(
             answer=answer,
@@ -78,7 +85,7 @@ class RagService:
             is_multi_hop=planned.is_multi_hop,
             coverage_score=planned.coverage_score,
             missing_requirements=missing_requirements,
-            evidence_requirements=self._evidence_requirements(planned),
+            evidence_requirements=evidence_requirements,
         )
 
     def entry(self, document_id: str) -> RuleDocument | None:
@@ -251,3 +258,62 @@ class RagService:
                 }
             )
         return items
+
+    def _llm_answer(
+        self,
+        question: str,
+        scope: SearchScope,
+        evidence: List[SearchResult],
+        evidence_requirements: List[Dict[str, object]],
+    ) -> str:
+        system_prompt = (
+            "你是中文 D&D 规则百科 RAG 产品的回答器。只能基于 evidence pack 回答。"
+            "不能补充 evidence pack 之外的规则细节，即使你知道这些细节是真的。"
+            "如果 evidence pack 顶部包含 Evidence Requirements，必须先检查每个 required requirement 的 status。"
+            "只要存在 missing 的 required requirement，结论必须是证据不足，不能把缺失需求当成已覆盖。"
+            "适用条件只能写 evidence pack 明示的信息；没有明示就写“证据包未覆盖更多适用条件”。"
+            "容易误判只能写 evidence pack 已经出现的误判点；没有明示就写“证据包未覆盖常见误判”。"
+            "输出结构：结论、依据、适用条件、容易误判、引用。每个关键结论必须带 [E编号]。"
+        )
+        user_prompt = "\n\n".join(
+            [
+                f"Question: {question}",
+                f"Scope: {scope.value}",
+                "Evidence Pack:",
+                self._evidence_pack(evidence, evidence_requirements),
+            ]
+        )
+        return self.llm_provider.answer(system_prompt, user_prompt)
+
+    def _evidence_pack(self, evidence: List[SearchResult], evidence_requirements: List[Dict[str, object]]) -> str:
+        lines: List[str] = []
+        if evidence_requirements:
+            lines.append("Evidence Requirements:")
+            for item in evidence_requirements:
+                status = "covered" if item.get("covered") else "missing"
+                required = "required" if item.get("required") else "optional"
+                titles = "、".join(str(title) for title in item.get("evidence_titles", []) if title) or "-"
+                lines.append(
+                    "- {id} | {label} | role={role} | {required} | status={status} | evidence_titles={titles}".format(
+                        id=item.get("id", ""),
+                        label=item.get("label", ""),
+                        role=item.get("role", ""),
+                        required=required,
+                        status=status,
+                        titles=titles,
+                    )
+                )
+        for idx, result in enumerate(evidence, 1):
+            chunk = result.chunk
+            text = " ".join(chunk.display_text.split())
+            lines.append(
+                "[E{}] {} | {} | document_id={} | score={:.3f}\n{}".format(
+                    idx,
+                    chunk.citation.title or chunk.document_id,
+                    chunk.citation.label(),
+                    chunk.document_id,
+                    result.score.final_score,
+                    text,
+                )
+            )
+        return "\n\n".join(lines)

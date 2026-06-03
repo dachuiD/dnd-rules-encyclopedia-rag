@@ -1,0 +1,172 @@
+# 公开 Demo 部署手册：Cloudflare Pages + 阿里云 ECS
+
+## 目标架构
+
+```text
+Browser
+-> Cloudflare Pages static frontend
+-> Cloudflare Pages Function /api/*
+-> Aliyun ECS FastAPI :8000
+-> local full data + storage/embedding-index/full.jsonl
+-> DashScope query embedding + DeepSeek answer generation
+```
+
+首版使用 Cloudflare 默认 `pages.dev` 域名，不配置自定义域名。
+
+## ECS 规格
+
+推荐起步规格：
+
+- 2 vCPU
+- 8GB RAM
+- 40GB SSD
+- Ubuntu 22.04 LTS
+- Docker + Docker Compose plugin
+
+本地全量加载实测峰值 RSS 约 4.4GB。FastAPI 只跑 1 worker，避免每个 worker 复制一份全量索引。
+
+## ECS 目录
+
+固定目录：
+
+```text
+/opt/dnd-rag/app
+/opt/dnd-rag/data/fvtt-cn-5etools/data
+/opt/dnd-rag/storage/embedding-index/full.jsonl
+/opt/dnd-rag/.env.production
+```
+
+上传代码：
+
+```bash
+rsync -av --exclude .git --exclude .venv --exclude data --exclude storage --exclude reports ./ root@ECS_IP:/opt/dnd-rag/app/
+```
+
+上传授权数据和全量索引：
+
+```bash
+rsync -av data/fvtt-cn-5etools/data/ root@ECS_IP:/opt/dnd-rag/data/fvtt-cn-5etools/data/
+rsync -av storage/embedding-index/full.jsonl root@ECS_IP:/opt/dnd-rag/storage/embedding-index/full.jsonl
+```
+
+## ECS 环境变量
+
+在 ECS 写入 `/opt/dnd-rag/.env.production`：
+
+```bash
+FIVEETOOLS_DATA_DIR=/opt/dnd-rag/data/fvtt-cn-5etools/data
+EMBEDDING_INDEX_PATH=/opt/dnd-rag/storage/embedding-index/full.jsonl
+QUERY_EMBEDDING_PROVIDER=dashscope
+
+ANSWER_PROVIDER=deepseek
+DEEPSEEK_API_KEY=replace-with-production-key
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://api.deepseek.com/chat/completions
+
+DASHSCOPE_API_KEY=replace-with-production-key
+DASHSCOPE_EMBEDDING_MODEL=text-embedding-v4
+DASHSCOPE_EMBEDDING_DIMENSIONS=1024
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings
+
+RAG_GATEWAY_TOKEN=replace-with-long-random-token
+```
+
+`RAG_GATEWAY_TOKEN` 必须和 Cloudflare Pages Function 的环境变量一致。
+
+## 启动后端
+
+```bash
+cd /opt/dnd-rag/app
+docker compose -f docker-compose.prod.yml up -d --build app
+docker compose -f docker-compose.prod.yml logs -f app
+```
+
+如需在非 ECS 机器上预览 compose 配置，可临时覆盖 env 文件路径：
+
+```bash
+RAG_ENV_FILE=.env.example docker compose -f docker-compose.prod.yml config
+```
+
+健康检查：
+
+```bash
+curl http://ECS_IP:8000/healthz
+```
+
+业务 API 必须被 token 保护：
+
+```bash
+curl -i http://ECS_IP:8000/api/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"隐身的人攻击有优势吗？"}'
+```
+
+预期返回 `401`。
+
+带 token smoke test：
+
+```bash
+curl http://ECS_IP:8000/api/ask \
+  -H 'Content-Type: application/json' \
+  -H 'X-RAG-GATEWAY-TOKEN: replace-with-long-random-token' \
+  -d '{"question":"法师挨打后专注会立刻断吗？","scope":"core"}'
+```
+
+## Cloudflare Pages
+
+Pages 项目设置：
+
+- Build command: 留空
+- Build output directory: `static`
+- Functions directory: `functions`
+
+Pages Function 环境变量：
+
+```text
+BACKEND_ORIGIN=http://ECS_IP:8000
+RAG_GATEWAY_TOKEN=replace-with-long-random-token
+```
+
+创建 KV namespace 并绑定到 Pages Functions：
+
+```text
+Binding name: RATE_LIMIT_KV
+```
+
+限流默认：
+
+- 10 requests / minute / IP
+- 100 requests / day / IP
+- 单问题 500 字
+
+## Cloudflare Smoke Test
+
+部署成功后访问：
+
+```text
+https://PROJECT.pages.dev
+```
+
+测试问题：
+
+```text
+隐身的人攻击有优势吗？
+法师挨打后专注会立刻断吗？
+法术被超魔静默施法处理后，还能被反制法术反制吗？
+```
+
+验收点：
+
+- 页面能打开。
+- `/api/ask` 返回 DeepSeek 生成答案。
+- 返回中包含引用、证据、相关条目和 evidence requirements。
+- 高频请求触发 `429`。
+- 直接访问 ECS `/api/ask` 无 token 返回 `401`。
+
+## 成本和扩容
+
+如果 8GB ECS 出现 OOM 或启动不稳定：
+
+- 优先升到 4 vCPU / 16GB。
+- 不增加 uvicorn worker 数。
+- 后续再迁移 pgvector 或专用向量库，降低 Python 进程常驻内存。

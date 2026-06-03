@@ -24,6 +24,7 @@
 - 检索解释面板。
 - 评测脚本。
 - Postgres + pgvector schema。
+- 公开 Demo 部署骨架：FastAPI 生产配置、Cloudflare Pages Function 代理限流、Docker/ECS 部署说明。
 
 保留为生产替换点：
 
@@ -48,6 +49,12 @@ uvicorn app:app --reload --port 8000
 
 ```text
 http://127.0.0.1:8000
+```
+
+生产公开 Demo 部署见：
+
+```text
+docs/deployment/public-demo-cloudflare-aliyun.md
 ```
 
 如果要接授权全量数据：
@@ -228,6 +235,15 @@ DASHSCOPE_EMBEDDING_DIMENSIONS=1024
 ```
 
 当前 Web Demo 默认不强制调用外部模型；生产接入时可把 `DeepSeekLLMProvider` 和 `DashScopeEmbeddingProvider` 接入索引构建与回答生成链路。
+
+生产环境变量：
+
+```bash
+ANSWER_PROVIDER=deepseek
+EMBEDDING_INDEX_PATH=/opt/dnd-rag/storage/embedding-index/full.jsonl
+QUERY_EMBEDDING_PROVIDER=dashscope
+RAG_GATEWAY_TOKEN=...
+```
 
 建议先用 `DASHSCOPE_EMBEDDING_DIMENSIONS=1024` 建 200-500 个 chunk 的小样本索引，跑检索评测后再对比 2048 维度。这样简历里可以讲清楚“性能、成本、召回质量”的取舍，而不是盲目上最大配置。
 
