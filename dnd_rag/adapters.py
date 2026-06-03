@@ -22,6 +22,7 @@ ENTRY_KEYS = {
     "background": "backgrounds",
     "optionalfeature": "optionalfeatures",
     "variantrule": "variantrules",
+    "data": "book",
 }
 
 EXCLUDED_PATH_PARTS = {"roll20-module", "adventure"}
