@@ -174,6 +174,21 @@ python3 scripts/dnd_rag_cli.py eval-summary \
 
 社区真实题当前是候选集，`source_status` 为 `candidate_unverified` 的题目只能用于压力测试和失败类型分析，不能直接作为最终产品宣传指标。正式评测前需要核验社区来源、收紧 gold evidence，并区分宽松 `Recall@8` 与严格 `StrictDoc@8` 证据命中。
 
+生成 RAG vs 通用大模型回答质量小样本报告：
+
+```bash
+python3 scripts/dnd_rag_cli.py answer-eval \
+  --data-dir data/fvtt-cn-5etools/data \
+  --questions eval/answer_eval_small_sample.json \
+  --embedding-index storage/embedding-index/full.jsonl \
+  --limit 8 \
+  --top-k 6 \
+  --cache reports/answer-eval-cache.jsonl \
+  --out docs/evaluations/answer-eval-small-sample.md
+```
+
+`answer-eval` 会生成三路答案：`closed_book`、`evidence_only`、`rag_product`，并用自动 judge 从正确性、完整性、证据支撑、引用准确性、保守性、清晰度和记忆污染七个维度打分。自动分数只作为第一轮审阅材料，不替代人工复核。
+
 `storage/` 默认不进入 Git。这里面会保存模型输出向量，也可能间接暴露授权数据的语义内容，只适合本地调试和评测。
 
 `reports/` 默认不进入 Git，用于保存本地原始运行结果；`docs/evaluations/` 用于保存筛选后的可读评测归档，包含题目、参考答案、来源证据、分数解释和对比结论。

@@ -189,7 +189,10 @@ class HybridRetriever:
     def _embed_query(self, query: str) -> List[float] | None:
         if not self.embedding_provider or not self.chunk_embeddings:
             return None
-        vectors = self.embedding_provider.embed([query])
+        try:
+            vectors = self.embedding_provider.embed([query])
+        except Exception:
+            return None
         return vectors[0] if vectors else None
 
 

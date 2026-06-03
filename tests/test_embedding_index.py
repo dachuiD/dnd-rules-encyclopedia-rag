@@ -137,6 +137,31 @@ class EmbeddingAwareRetrievalTests(unittest.TestCase):
         self.assertEqual(results[0].score.dense_score, 1.0)
         self.assertGreater(results[0].score.dense_score, results[1].score.dense_score)
 
+    def test_retriever_falls_back_to_lexical_when_query_embedding_fails(self):
+        normalizer = FiveEToolsNormalizer()
+        invisible_doc = normalizer.normalize_entry(
+            {
+                "name": "隐形",
+                "ENG_name": "Invisible",
+                "source": "PHB",
+                "page": 291,
+                "entries": ["隐形生物进行攻击检定时具有优势。"],
+            },
+            "conditionsdiseases",
+        )
+        chunks = [build_chunks(invisible_doc)[0]]
+        provider = FakeEmbeddingProvider({"隐形攻击": [1.0]}, fail_on_call=1)
+        retriever = HybridRetriever(
+            chunks,
+            chunk_embeddings={chunks[0].id: [1.0]},
+            embedding_provider=provider,
+        )
+
+        results = retriever.search("隐形攻击", scope=SearchScope.CORE, top_k=1)
+
+        self.assertTrue(results)
+        self.assertEqual(results[0].chunk.document_id, invisible_doc.id)
+
 
 class EmbeddingIndexBuildTests(unittest.TestCase):
     def test_build_embedding_index_batches_missing_chunks_and_reuses_fresh_cache(self):

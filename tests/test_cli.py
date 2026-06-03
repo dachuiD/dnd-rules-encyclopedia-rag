@@ -93,6 +93,37 @@ class CliTests(unittest.TestCase):
             self.assertIn("Delta", markdown)
             self.assertIn("Changed Questions", markdown)
 
+    def test_answer_eval_command_writes_mock_markdown_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "answer-eval.md"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/dnd_rag_cli.py",
+                    "answer-eval",
+                    "--data-dir",
+                    "sample_data/5etools",
+                    "--questions",
+                    "eval/golden_sample.json",
+                    "--out",
+                    str(out),
+                    "--limit",
+                    "1",
+                    "--mock-llm",
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            markdown = out.read_text(encoding="utf-8")
+            self.assertIn("回答质量评测", markdown)
+            self.assertIn("closed_book", markdown)
+            self.assertIn("rag_product", markdown)
+            self.assertIn("Memory Contamination", markdown)
+
 
 if __name__ == "__main__":
     unittest.main()

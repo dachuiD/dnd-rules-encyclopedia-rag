@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from dnd_rag.adapters import FiveEToolsCnAdapter
+from dnd_rag.answer_eval import CachedLLMProvider, FixedLLMProvider, evaluate_answer_quality, render_answer_eval_markdown
 from dnd_rag.audit import audit_source_tree
 from dnd_rag.chunking import build_chunks
 from dnd_rag.embedding_index import build_embedding_index, filter_fresh_rows, load_embedding_index, text_hash
@@ -21,7 +22,7 @@ from dnd_rag.eval import (
     render_retrieval_eval_markdown,
     render_retrieval_eval_summary_markdown,
 )
-from dnd_rag.providers import DashScopeEmbeddingProvider
+from dnd_rag.providers import DashScopeEmbeddingProvider, DeepSeekLLMProvider
 from dnd_rag.service import RagService
 from dnd_rag.settings import load_env_file
 
@@ -62,6 +63,17 @@ def main() -> None:
     eval_summary.add_argument("--embedding-index")
     eval_summary.add_argument("--title", default="Retrieval Eval Summary")
     eval_summary.add_argument("--compare-baseline", action="store_true")
+
+    answer_eval = sub.add_parser("answer-eval", help="Run answer-quality A/B/C eval with automatic scoring")
+    answer_eval.add_argument("--data-dir", default="sample_data/5etools")
+    answer_eval.add_argument("--questions", default="eval/golden_sample.json")
+    answer_eval.add_argument("--out", default="docs/evaluations/answer-eval-small-sample.md")
+    answer_eval.add_argument("--embedding-index")
+    answer_eval.add_argument("--limit", type=int, default=8)
+    answer_eval.add_argument("--top-k", type=int, default=6)
+    answer_eval.add_argument("--cache", default="reports/answer-eval-cache.jsonl")
+    answer_eval.add_argument("--mock-llm", action="store_true")
+    answer_eval.add_argument("--title", default="RAG vs 通用大模型回答质量评测")
 
     embed = sub.add_parser("embed-sample", help="Build a small DashScope embedding index")
     embed.add_argument("--data-dir", default="sample_data/5etools")
@@ -155,6 +167,43 @@ def main() -> None:
                 embedding_index=args.embedding_index or "",
                 report_label="Embedding Hybrid" if args.embedding_index else "Token Hybrid",
             )
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(markdown, encoding="utf-8")
+        print(f"Wrote {out}")
+    elif args.command == "answer-eval":
+        adapter = FiveEToolsCnAdapter(Path(args.data_dir))
+        service = _service_from_adapter(adapter, embedding_index=Path(args.embedding_index) if args.embedding_index else None)
+        questions = json.loads(Path(args.questions).read_text(encoding="utf-8"))
+        if args.limit > 0:
+            questions = questions[: args.limit]
+        if args.mock_llm:
+            answer_llm = FixedLLMProvider("这是 mock 回答，用于测试 CLI，不代表真实模型表现。")
+            judge_llm = FixedLLMProvider(
+                '{"scores":{"correctness":1,"completeness":1,"evidence_support":1,'
+                '"citation_accuracy":1,"caution":1,"clarity":1,"memory_contamination":1},'
+                '"total":7,"verdict":"tie","reasons":["mock judge"]}'
+            )
+        else:
+            answer_llm = CachedLLMProvider(
+                DeepSeekLLMProvider(),
+                Path(args.cache),
+                namespace="answer-eval-answer",
+            )
+            judge_llm = CachedLLMProvider(
+                DeepSeekLLMProvider(),
+                Path(args.cache),
+                namespace="answer-eval-judge-v2",
+            )
+        report = evaluate_answer_quality(
+            service,
+            questions,
+            answer_llm=answer_llm,
+            judge_llm=judge_llm,
+            top_k=args.top_k,
+            title=args.title,
+        )
+        markdown = render_answer_eval_markdown(report)
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(markdown, encoding="utf-8")

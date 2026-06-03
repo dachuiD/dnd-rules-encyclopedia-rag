@@ -13,4 +13,5 @@ indexes/
 *.db
 reports/*.png
 reports/*.json
+reports/*.jsonl
 reports/*.md
