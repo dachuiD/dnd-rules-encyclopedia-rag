@@ -46,6 +46,8 @@ def create_app(service: RagService | None = None, gateway_token: str | None = No
     app.mount("/static", StaticFiles(directory="static"), name="static")
     app.state.service = service or build_service()
     app.state.gateway_token = gateway_token if gateway_token is not None else os.getenv("RAG_GATEWAY_TOKEN", "")
+    if _env_flag("REQUIRE_GATEWAY_TOKEN") and not app.state.gateway_token:
+        raise RuntimeError("RAG_GATEWAY_TOKEN is required when REQUIRE_GATEWAY_TOKEN is enabled")
 
     @app.middleware("http")
     async def require_gateway_token(request: Request, call_next):
@@ -120,6 +122,10 @@ def create_app(service: RagService | None = None, gateway_token: str | None = No
         return {"documents": len(app.state.service.documents), "chunks": len(app.state.service.chunks)}
 
     return app
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _query_embedding_provider(index_enabled: bool):

@@ -80,12 +80,14 @@ check_config_files() {
   grep -q '^  app:' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml must define app service"
   grep -q -- '--workers' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml app service must pin uvicorn workers"
   grep -q 'EMBEDDING_INDEX_PATH.*full.jsonl' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml must point app to full embedding index"
+  grep -q 'REQUIRE_GATEWAY_TOKEN.*true' "${ROOT_DIR}/docker-compose.yml" || fail "docker-compose.yml must require gateway token in production"
   pass "default compose app service"
 
   grep -q 'pages_build_output_dir = "static"' "${ROOT_DIR}/wrangler.toml" || fail "wrangler.toml must set pages_build_output_dir to static"
   pass "Wrangler build output"
 
   grep -q 'RAG_GATEWAY_TOKEN=replace-with' "${ROOT_DIR}/.env.example" || fail ".env.example must document RAG_GATEWAY_TOKEN"
+  grep -q 'REQUIRE_GATEWAY_TOKEN=false' "${ROOT_DIR}/.env.example" || fail ".env.example must document local REQUIRE_GATEWAY_TOKEN default"
   grep -q 'QUERY_EMBEDDING_PROVIDER=dashscope' "${ROOT_DIR}/.env.example" || fail ".env.example must document DashScope query embedding"
   pass "production env template"
 }

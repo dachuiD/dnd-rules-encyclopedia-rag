@@ -10,6 +10,7 @@ services:
       EMBEDDING_INDEX_PATH: ${EMBEDDING_INDEX_PATH:-/opt/dnd-rag/storage/embedding-index/full.jsonl}
       QUERY_EMBEDDING_PROVIDER: ${QUERY_EMBEDDING_PROVIDER:-dashscope}
       ANSWER_PROVIDER: ${ANSWER_PROVIDER:-deepseek}
+      REQUIRE_GATEWAY_TOKEN: ${REQUIRE_GATEWAY_TOKEN:-true}
     ports:
       - "8000:8000"
     volumes:

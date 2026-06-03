@@ -45,10 +45,19 @@ class DeploymentTests(unittest.TestCase):
         compose = Path("docker-compose.yml").read_text(encoding="utf-8")
 
         self.assertIn("  app:", compose)
+        self.assertIn("REQUIRE_GATEWAY_TOKEN", compose)
+        self.assertIn("true", compose)
         self.assertIn("EMBEDDING_INDEX_PATH", compose)
         self.assertIn("/opt/dnd-rag/storage/embedding-index/full.jsonl", compose)
         self.assertIn("--workers", compose)
         self.assertIn('"1"', compose)
+
+    def test_create_app_requires_gateway_token_when_production_guard_is_enabled(self):
+        service = RagService.from_sample_data()
+
+        with _temporary_env(REQUIRE_GATEWAY_TOKEN="true", RAG_GATEWAY_TOKEN=""):
+            with self.assertRaises(RuntimeError):
+                create_app(service=service)
 
     def test_build_service_loads_fresh_embedding_index_and_query_provider(self):
         with tempfile.TemporaryDirectory() as tmp:

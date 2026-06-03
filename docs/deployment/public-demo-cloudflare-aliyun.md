@@ -113,9 +113,10 @@ DASHSCOPE_EMBEDDING_DIMENSIONS=1024
 DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings
 
 RAG_GATEWAY_TOKEN=replace-with-long-random-token
+REQUIRE_GATEWAY_TOKEN=true
 ```
 
-`RAG_GATEWAY_TOKEN` 必须和 Cloudflare Pages Function 的环境变量一致。
+`RAG_GATEWAY_TOKEN` 必须和 Cloudflare Pages Function 的环境变量一致。生产环境保持 `REQUIRE_GATEWAY_TOKEN=true`，这样如果漏配 token，FastAPI 会直接启动失败，而不是以开放 API 的状态运行。
 
 ## ECS 安全组
 
