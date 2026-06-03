@@ -24,7 +24,7 @@
 - 检索解释面板。
 - 评测脚本。
 - Postgres + pgvector schema。
-- 公开 Demo 部署骨架：FastAPI 生产配置、Cloudflare Pages Function 代理限流、Docker/ECS 部署说明。
+- 公开 Demo 部署骨架：FastAPI 生产配置、Cloudflare Pages Function 代理限流、Docker/ECS 部署说明和 smoke test 脚本。
 
 保留为生产替换点：
 
@@ -55,6 +55,24 @@ http://127.0.0.1:8000
 
 ```text
 docs/deployment/public-demo-cloudflare-aliyun.md
+```
+
+常用上线辅助脚本：
+
+```bash
+# 同步代码、授权数据和全量索引到 ECS，并启动后端
+ECS_HOST=ECS_IP ECS_USER=root scripts/deploy_ecs.sh
+
+# 检查 ECS healthz、token 保护和 3 个真实问题
+BACKEND_ORIGIN=http://ECS_IP:8000 \
+RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+scripts/smoke_public_demo.sh
+
+# Pages 发布后检查公开入口
+BACKEND_ORIGIN=http://ECS_IP:8000 \
+PUBLIC_ORIGIN=https://PROJECT.pages.dev \
+RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+scripts/smoke_public_demo.sh
 ```
 
 如果要接授权全量数据：

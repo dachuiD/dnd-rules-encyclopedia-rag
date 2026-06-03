@@ -49,6 +49,26 @@ rsync -av data/fvtt-cn-5etools/data/ root@ECS_IP:/opt/dnd-rag/data/fvtt-cn-5etoo
 rsync -av storage/embedding-index/full.jsonl root@ECS_IP:/opt/dnd-rag/storage/embedding-index/full.jsonl
 ```
 
+也可以使用仓库内脚本完成同步和启动：
+
+```bash
+ECS_HOST=ECS_IP \
+ECS_USER=root \
+scripts/deploy_ecs.sh
+```
+
+脚本默认会同步应用代码、授权数据、全量 embedding index，并在 ECS 上执行：
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build app
+```
+
+如果数据或索引已经在 ECS 上，可跳过对应同步：
+
+```bash
+ECS_HOST=ECS_IP SYNC_DATA=0 SYNC_INDEX=0 scripts/deploy_ecs.sh
+```
+
 ## ECS 环境变量
 
 在 ECS 写入 `/opt/dnd-rag/.env.production`：
@@ -112,6 +132,14 @@ curl http://ECS_IP:8000/api/ask \
   -d '{"question":"法师挨打后专注会立刻断吗？","scope":"core"}'
 ```
 
+或使用脚本一次性检查健康状态、token 保护和 3 个真实问题：
+
+```bash
+BACKEND_ORIGIN=http://ECS_IP:8000 \
+RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+scripts/smoke_public_demo.sh
+```
+
 ## Cloudflare Pages
 
 Pages 项目设置：
@@ -162,6 +190,17 @@ https://PROJECT.pages.dev
 - 返回中包含引用、证据、相关条目和 evidence requirements。
 - 高频请求触发 `429`。
 - 直接访问 ECS `/api/ask` 无 token 返回 `401`。
+
+Pages 发布后可以继续复用 smoke 脚本：
+
+```bash
+BACKEND_ORIGIN=http://ECS_IP:8000 \
+PUBLIC_ORIGIN=https://PROJECT.pages.dev \
+RAG_GATEWAY_TOKEN=replace-with-long-random-token \
+scripts/smoke_public_demo.sh
+```
+
+如需实际验证限流，加上 `CHECK_RATE_LIMIT=1`。这个检查会消耗当前 IP 的公开 demo 配额，建议只在最终验收时跑一次。
 
 ## 成本和扩容
 
