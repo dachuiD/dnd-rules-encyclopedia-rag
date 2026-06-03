@@ -181,6 +181,74 @@ class MultiHopPlannerTests(unittest.TestCase):
         )
         self.assertIn("ready_spell_mechanic", [group.requirement.id for group in result.requirement_evidence if group.covered])
 
+    def test_concentration_damage_question_requires_general_concentration_rule(self):
+        retriever = HybridRetriever(_chunks_for_entries([
+            (
+                {
+                    "name": "专注",
+                    "source": "PHB",
+                    "page": 203,
+                    "entries": [
+                        "每当你在专注于一个法术的期间受到伤害，你都必须进行一次体质豁免，成功则继续维持你的专注。若失败则专注被中断。"
+                    ],
+                },
+                "conditionsdiseases",
+            ),
+            (
+                {
+                    "name": "地震术",
+                    "source": "PHB",
+                    "page": 236,
+                    "entries": ["区域内地面上正专注于法术的生物必须进行体质豁免，失败则专注中断。"],
+                },
+                "spells",
+            ),
+        ]))
+        planner = MultiHopEvidencePlanner(retriever)
+
+        result = planner.search("法师挨打后专注会立刻断吗？", scope=SearchScope.CORE, top_k=4)
+
+        self.assertEqual(result.coverage_score, 1.0)
+        self.assertEqual(result.missing_requirements, [])
+        self.assertEqual(
+            [group.requirement.id for group in result.requirement_evidence if group.covered],
+            ["concentration_damage_rule"],
+        )
+        self.assertEqual(result.evidence[0].chunk.citation.title, "专注")
+
+    def test_silence_verbal_question_focuses_on_silence_evidence(self):
+        retriever = HybridRetriever(_chunks_for_entries([
+            (
+                {
+                    "name": "沉默术",
+                    "source": "PHB",
+                    "page": 275,
+                    "entries": ["在里面不可能施放需要声音构材的法术。"],
+                },
+                "spells",
+            ),
+            (
+                {
+                    "name": "激活物品",
+                    "source": "DMG",
+                    "page": 141,
+                    "entries": ["一些魔法物品可以让其使用者从物品中施展法术，且不需要任何构材。"],
+                },
+                "actions",
+            ),
+        ]))
+        planner = MultiHopEvidencePlanner(retriever)
+
+        result = planner.search("沉默术范围里还能施展有言语成分的法术吗？", scope=SearchScope.CORE, top_k=4)
+
+        self.assertEqual(result.coverage_score, 1.0)
+        self.assertEqual(result.missing_requirements, [])
+        self.assertEqual(
+            [group.requirement.id for group in result.requirement_evidence if group.covered],
+            ["silence_verbal_component_rule"],
+        )
+        self.assertTrue(all(item.chunk.citation.title == "沉默术" for item in result.evidence))
+
 
 def _chunks_for_entries(entries):
     normalizer = FiveEToolsNormalizer()

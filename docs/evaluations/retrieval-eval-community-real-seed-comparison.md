@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Generated at: `2026-06-03T16:21:31+08:00`
+- Generated at: `2026-06-03T17:04:45+08:00`
 - Dataset: `eval/community_real_seed.json`
 - Data dir: `data/fvtt-cn-5etools/data`
 - Embedding index: `storage/embedding-index/full.jsonl`
@@ -16,9 +16,9 @@
 
 | Run | Total | Recall@8 | MRR | StrictDoc@8 | StrictDocMRR | Primary@1 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Token Hybrid | 12 | 100.00% | 0.8958 | 100.00% | 0.6640 | 0.7500 |
+| Token Hybrid | 12 | 100.00% | 0.9583 | 100.00% | 0.7444 | 0.8333 |
 | Embedding Hybrid | 12 | 100.00% | 1.0000 | 100.00% | 0.9444 | 1.0000 |
-| Delta | - | +0.00% | +0.1042 | +0.00% | +0.2804 | +0.2500 |
+| Delta | - | +0.00% | +0.0417 | +0.00% | +0.2000 | +0.1667 |
 
 说明：`Recall@K` 是宽松命中；`StrictDoc@K` 只统计 gold document 命中，更适合判断证据是否真的找对。
 
@@ -31,7 +31,7 @@
 | community-rpgse-ready-bonus-action-spell | 如果我这回合已经用附赠动作施法，还能用动作准备另一个法术吗？ | 变化：Top1 证据不同 | 准备 (PHB / actions / 准备 / p.193, 0.796) | 准备 (PHB / actions / 准备 / p.193, 0.957) |
 | community-rpgse-blindsight-invisible-disadvantage | 有盲视的生物攻击隐形目标，还会因为看不见而有劣势吗？ | 变化：Top1 证据不同 | 隐形 (PHB / conditions / 隐形 / p.291, 0.900) | 隐形 (PHB / conditions / 隐形 / p.291, 0.956) |
 | community-rpgse-blindsight-detect-invisible | 盲视能不能发现隐形生物的位置？ | 变化：Top1 证据不同 | 隐形 (PHB / conditions / 隐形 / p.291, 0.900) | 隐形 (PHB / conditions / 隐形 / p.291, 0.956) |
-| community-rpgse-silence-verbal-components | 沉默术范围里，带语言成分的法术是不是完全不能施放？ | 改善：Top1 命中核心证据 | 触发术 (PHB / spells / 触发术 / p.227, 0.777) | 沉默术 (PHB / spells / 沉默术 / p.275, 0.800) |
+| community-rpgse-silence-verbal-components | 沉默术范围里，带语言成分的法术是不是完全不能施放？ | 变化：Top1 证据不同 | 沉默术 (PHB / spells / 沉默术 / p.275, 0.932) | 沉默术 (PHB / spells / 沉默术 / p.275, 1.000) |
 | community-rpgse-subtle-counterspell | 法术被超魔静默施法处理后，还能被反制法术反制吗？ | 变化：Top1 证据不同 | 反制法术 (PHB / spells / 反制法术 / p.228, 1.000) | 反制法术 (PHB / spells / 反制法术 / p.228, 0.891) |
 | community-rpgse-magic-item-counterspell | 用魔法物品施法能被反制法术吗？ | 变化：Top1 证据不同 | 反制法术 (PHB / spells / 反制法术 / p.228, 1.000) | 反制法术 (PHB / spells / 反制法术 / p.228, 0.891) |
 | community-rpgse-grapple-shove-prone | 能不能先擒抱再推倒伏地，让目标站不起来？ | 变化：Top1 证据不同 | 水巨灵(玛利德) (MM / bestiary / 水巨灵(玛利德) / p.146, 0.711) | 擒抱 (PHB / actions / 擒抱 / p.195, 0.800) |

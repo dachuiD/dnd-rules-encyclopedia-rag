@@ -51,6 +51,24 @@ class AuditAndServiceTests(unittest.TestCase):
         self.assertIn("不会自动中断", response.direct_answer)
         self.assertTrue(any("体质豁免" in point for point in response.supporting_points))
 
+    def test_adapter_loads_status_entries_as_conditions_diseases_rules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data_dir = root / "data"
+            data_dir.mkdir()
+            (data_dir / "conditionsdiseases.json").write_text(
+                '{"status":[{"name":"专注","source":"PHB","page":203,'
+                '"entries":["每当你在专注于一个法术的期间受到伤害，你都必须进行一次体质豁免。"]}]}',
+                encoding="utf-8",
+            )
+
+            docs = FiveEToolsCnAdapter(data_dir).load_documents()
+
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0].title_zh, "专注")
+        self.assertEqual(docs[0].category, "conditionsdiseases")
+        self.assertEqual(docs[0].knowledge_domain, "rules")
+
     def test_service_exposes_multihop_evidence_coverage_for_compound_rulings(self):
         service = _service_for_entries([
             (

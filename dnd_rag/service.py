@@ -124,7 +124,7 @@ class RagService:
                 "",
                 f"{sections[1]}：{caveat_text}",
                 "",
-                f"{sections[2]}：如果证据没有覆盖你桌上的特殊能力、特殊感官或房规，应补充上下文后再裁定。",
+                f"{sections[2]}：如果证据没有覆盖额外例外，应补充上下文后再裁定。",
             ]
         )
         return "\n".join(lines)

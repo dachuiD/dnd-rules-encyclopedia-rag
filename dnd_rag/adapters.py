@@ -12,6 +12,7 @@ ENTRY_KEYS = {
     "action": "actions",
     "condition": "conditions",
     "disease": "conditions",
+    "status": "conditionsdiseases",
     "spell": "spells",
     "monster": "bestiary",
     "class": "class",
@@ -68,4 +69,3 @@ class FiveEToolsCnAdapter:
                 if isinstance(entry, dict):
                     docs.append(self.normalizer.normalize_entry(entry, category, raw_ref=str(path)))
         return docs
-

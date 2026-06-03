@@ -81,7 +81,10 @@ class AnswerEvalTests(unittest.TestCase):
         self.assertIn("不得编写未被证据支持的 DC", rag_system_prompt)
         self.assertIn("Evidence Requirements", rag_system_prompt)
         self.assertIn("missing 的 required requirement", rag_system_prompt)
-        self.assertIn("适用条件和容易误判只能写 evidence pack 明示的信息", rag_system_prompt)
+        self.assertIn("适用条件只能写 evidence pack 明示的信息", rag_system_prompt)
+        self.assertIn("容易误判只能写 evidence pack 已经出现的误判点", rag_system_prompt)
+        self.assertIn("不要主动引入问题没有询问的边界", rag_system_prompt)
+        self.assertIn("不要为了完整性扩展到其他规则", rag_system_prompt)
 
     def test_answer_quality_eval_generates_three_variants_and_scores_them(self):
         service = RagService.from_sample_data()

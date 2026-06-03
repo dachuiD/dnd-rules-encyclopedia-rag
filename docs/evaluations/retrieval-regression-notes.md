@@ -15,7 +15,7 @@
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | 全量种子题 | Token Hybrid | 74.19% | 0.5808 | 51.61% | 0.4108 | 45.16% |
 | 全量种子题 | Embedding Hybrid | 96.77% | 0.8532 | 96.77% | 0.7349 | 74.19% |
-| 社区真实候选题 | Token Hybrid | 100.00% | 0.8958 | 100.00% | 0.6640 | 75.00% |
+| 社区真实候选题 | Token Hybrid | 100.00% | 0.9583 | 100.00% | 0.7444 | 83.33% |
 | 社区真实候选题 | Embedding Hybrid | 100.00% | 1.0000 | 100.00% | 0.9444 | 100.00% |
 
 结论：embedding 整体有效，精确条目名保护修复了 `沉默术`、`反制法术` 这类显式实体被相邻语义压过的问题；多跳 planner 和结构化字段 chunk 进一步修复了“需要两组以上规则证据”的复合裁定题。后续不能只看聚合指标调参，而要把失败模式归类后一起处理。
@@ -63,6 +63,7 @@
 | `community-rpgse-subtle-counterspell` | 已修复，Embedding Top1 为 `反制法术`，planner 同时要求 `微妙法术` 证据。 | `counterspell`/反制相关别名、精确标题保护和多跳需求合并起效。 | 保留为“超魔机制 + 触发规则”类回归测试。 |
 | `community-rpgse-magic-item-counterspell` | 已修复，证据包同时覆盖 `反制法术` 与 `激活物品`。 | 多跳 planner 将问题拆成“反制法术触发条件 + 魔法物品激活机制”。 | 后续用 `Requirement Coverage@K` 和 `Complete Case Rate` 作为正式多跳指标。 |
 | `community-rpgse-ready-bonus-action-spell` | 已识别为证据缺失型复合题。 | 当前数据有 `准备法术机制`，但缺 PHB 第十章 `附赠动作施法限制` 正文。 | 补齐规则章节正文；当前回答层必须输出证据不足，不能硬答。 |
+| `core-concentration-not-auto-break` | 已修复，`专注` 作为 `conditionsdiseases.status` 被读取并进入规则文档。 | 之前 adapter 只读取 `condition`、`disease`，漏掉 `status`。 | 保留 adapter 回归测试，后续重建 embedding 索引时确认 `专注` chunk 入库。 |
 
 ## 多跳检索补充
 
@@ -87,19 +88,20 @@
 
 | Variant | Avg Total | Wins | Ties | Losses |
 | --- | ---: | ---: | ---: | ---: |
-| closed_book | 11.25 | 6 | 1 | 1 |
+| closed_book | 11.75 | 7 | 0 | 1 |
 | evidence_only | 11.38 | 5 | 0 | 3 |
-| rag_product | 12.38 | 6 | 0 | 2 |
+| rag_product | 12.75 | 6 | 2 | 0 |
 
 观察：
 
 - `rag_product` 已在 8 题小样本上超过 `evidence_only`，但样本量仍小，不能当作最终宣传指标。
 - 优势主要来自复杂题：结构化法术字段和 Evidence Requirements 让回答器知道哪些证据已覆盖、哪些缺失。
-- `Memory` 分数仍弱于 `evidence_only`，说明后续还需要做 `claim -> evidence` 审计。
+- 本轮收紧回答 prompt 后，`Memory` 分数从 `0.75` 回升到 `1.75`，与 `evidence_only` 持平。
+- `静默施法 + 反制法术` 仍暴露出证据需求缺口：系统需要知道“构材被移除后是否仍可观察到施法”，而不是只找 `反制法术` 和 `精妙法术`。
 
 下一步：
 
-- 补齐 PHB 第十章规则章节正文，尤其是施法、构材、专注、附赠动作施法限制。
+- 补齐 PHB 第十章规则章节正文，尤其是施法、构材、附赠动作施法限制、可观察施法构材。
 - 为新增 `spell_metadata` chunk 重新跑 embedding，避免长期依赖 lexical fallback。
 - 增加 `claim -> evidence` 自动审计，作为 answer eval 之外的更细粒度指标。
 

@@ -261,7 +261,11 @@ def _generate_rag_product_answer(llm: LLMProvider, item: Dict[str, Any], evidenc
         "只要存在 missing 的 required requirement，结论必须是证据不足，不能把缺失需求当成已覆盖。"
         "如果 evidence pack 没有直接覆盖问题核心实体、条件或例外，必须说证据不足，并列出还需要哪些证据。"
         "不得编写未被证据支持的 DC、距离、持续时间、职业能力、超魔、专长例外或房规。"
-        "适用条件和容易误判只能写 evidence pack 明示的信息；没有明示就写“证据包未覆盖”。"
+        "适用条件只能写 evidence pack 明示的信息；没有明示就写“证据包未覆盖更多适用条件”。"
+        "容易误判只能写 evidence pack 已经出现的误判点；没有明示就写“证据包未覆盖常见误判”。"
+        "不要主动引入问题没有询问的边界，例如魔法物品、职业能力、超魔、特殊感官、专长例外或房规。"
+        "除非问题文本或 Evidence Requirements 明确要求这些边界，否则不要写具体例子。"
+        "如果 evidence pack 已能直接回答问题，优先给出短结论，不要为了完整性扩展到其他规则。"
         "输出结构：结论、依据、适用条件、容易误判、引用。每个关键结论必须带 [E编号]。",
         f"{_question_prompt(item)}\n\nEvidence Pack:\n{evidence_pack}",
     )

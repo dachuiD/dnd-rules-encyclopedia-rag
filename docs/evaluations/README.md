@@ -9,6 +9,7 @@ Use it for:
 - Baseline versus embedding comparisons that show improvements, regressions, and misses.
 - Strict evidence metrics such as `StrictDoc@K`, used to separate loose term hits from true gold-document hits.
 - Notes about LLM memory contamination controls for answer-quality evaluation.
+- Data coverage audits, such as PHB chapter availability and adapter-read gaps.
 
 Do not use it for:
 

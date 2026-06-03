@@ -224,6 +224,36 @@ def _concepts() -> List[_Concept]:
             category_markers=["附赠动作"],
             mechanic_markers=["附赠动作施法", "同一回合", "戏法"],
         ),
+        _Concept(
+            requirement=EvidenceRequirement(
+                id="concentration_damage_rule",
+                label="专注受伤害维持规则",
+                query="专注 受到伤害 体质豁免 维持专注 中断 DC",
+                required_terms=["专注", "受到伤害", "体质豁免"],
+                preferred_categories=["conditionsdiseases", "actions", "book"],
+                expected_titles=["专注"],
+                role="mechanic_rule",
+            ),
+            matcher=_mentions_concentration_damage,
+            entity_markers=["专注"],
+            category_markers=["状态"],
+            mechanic_markers=["受到伤害", "体质豁免", "维持专注"],
+        ),
+        _Concept(
+            requirement=EvidenceRequirement(
+                id="silence_verbal_component_rule",
+                label="沉默术与言语成分规则",
+                query="沉默术 言语成分 声音构材 不可能 施放 法术",
+                required_terms=["沉默术", "声音构材", "不可能"],
+                preferred_categories=["spells"],
+                expected_titles=["沉默术"],
+                role="restriction_rule",
+            ),
+            matcher=_mentions_silence_verbal_component,
+            entity_markers=["沉默术"],
+            category_markers=["法术"],
+            mechanic_markers=["言语成分", "声音构材", "施放法术"],
+        ),
     ]
 
 
@@ -247,6 +277,18 @@ def _mentions_bonus_action_spell_limit(query: str) -> bool:
     has_bonus = "附赠动作" in query or "bonus action" in query
     has_spell = "施法" in query or "法术" in query or "spell" in query
     return has_bonus and has_spell
+
+
+def _mentions_concentration_damage(query: str) -> bool:
+    has_concentration = "专注" in query or "维持法术" in query
+    has_damage = "受到伤害" in query or "受伤" in query or "挨打" in query or "被打" in query or "伤害" in query
+    return has_concentration and has_damage
+
+
+def _mentions_silence_verbal_component(query: str) -> bool:
+    has_silence = "沉默术" in query or "沉默" in query
+    has_verbal = "言语成分" in query or "声音构材" in query or "语言成分" in query or "有言语" in query
+    return has_silence and has_verbal
 
 
 def _matches_requirement(result: SearchResult, requirement: EvidenceRequirement) -> bool:
