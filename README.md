@@ -60,6 +60,12 @@ docs/deployment/public-demo-cloudflare-aliyun.md
 常用上线辅助脚本：
 
 ```bash
+# 仓库级部署前检查
+scripts/check_deployment_readiness.sh
+
+# 真正上线前确认全量数据和 full.jsonl 都存在
+STRICT_ASSETS=1 scripts/check_deployment_readiness.sh
+
 # 同步代码、授权数据和全量索引到 ECS，并启动后端
 ECS_HOST=ECS_IP ECS_USER=root scripts/deploy_ecs.sh
 

@@ -13,6 +13,28 @@ Browser
 
 首版使用 Cloudflare 默认 `pages.dev` 域名，不配置自定义域名。
 
+## 部署前检查
+
+先在本地跑仓库级 readiness：
+
+```bash
+scripts/check_deployment_readiness.sh
+```
+
+真正准备上传全量数据和全量索引前，开启严格资产检查：
+
+```bash
+STRICT_ASSETS=1 scripts/check_deployment_readiness.sh
+```
+
+严格检查会确认：
+
+- 授权数据目录存在。
+- `storage/embedding-index/full.jsonl` 存在。
+- 全量索引行数不少于默认阈值 `25000`。
+- 部署脚本、Cloudflare Function、静态前端、Docker/Compose 配置都存在。
+- 仓库内没有明显真实 key 形态的敏感值。
+
 ## ECS 规格
 
 推荐起步规格：
@@ -147,6 +169,18 @@ Pages 项目设置：
 - Build command: 留空
 - Build output directory: `static`
 - Functions directory: `functions`
+
+仓库也提供了 `wrangler.toml`：
+
+```toml
+pages_build_output_dir = "static"
+```
+
+如果使用 Wrangler CLI，可从仓库根目录部署 Pages：
+
+```bash
+npx wrangler pages deploy
+```
 
 Pages Function 环境变量：
 
