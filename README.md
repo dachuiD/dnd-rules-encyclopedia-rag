@@ -161,6 +161,17 @@ python3 scripts/dnd_rag_cli.py eval-summary \
   --out docs/evaluations/retrieval-eval-full-seed-comparison.md
 ```
 
+社区真实题候选集对比报告：
+
+```bash
+python3 scripts/dnd_rag_cli.py eval-summary \
+  --data-dir data/fvtt-cn-5etools/data \
+  --questions eval/community_real_seed.json \
+  --embedding-index storage/embedding-index/full.jsonl \
+  --compare-baseline \
+  --out docs/evaluations/retrieval-eval-community-real-seed-comparison.md
+```
+
 `storage/` 默认不进入 Git。这里面会保存模型输出向量，也可能间接暴露授权数据的语义内容，只适合本地调试和评测。
 
 `reports/` 默认不进入 Git，用于保存本地原始运行结果；`docs/evaluations/` 用于保存筛选后的可读评测归档，包含题目、参考答案、来源证据、分数解释和对比结论。

@@ -1,0 +1,411 @@
+[
+  {
+    "id": "community-rpgse-ready-spell-concentration",
+    "question_zh": "准备一个法术是不是要先开始专注？如果准备的是本来就需要专注的法术，会不会冲突？",
+    "question_original": "Does readying a spell require concentration, and how does that interact with spells that also require concentration?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Does%20readying%20a%20spell%20require%20concentration%2C%20and%20how%20does%20that%20interact%20with%20spells%20that%20also%20require%20concentration%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.准备.848683b5be"
+    ],
+    "expected_terms": [
+      "准备",
+      "施法",
+      "专注",
+      "反应"
+    ],
+    "expected_primary_terms": [
+      "准备",
+      "专注"
+    ],
+    "reference_answer": "准备法术时先正常施法并保持其能量，这要求专注直到触发条件发生；如果失去专注，法术消散。",
+    "must_include": [
+      "准备",
+      "专注",
+      "反应"
+    ],
+    "must_not_include": [
+      "不需要专注"
+    ],
+    "difficulty": "medium",
+    "question_type": "ruling",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-ready-cantrip",
+    "question_zh": "准备一个戏法也要专注吗？",
+    "question_original": "Can you ready a cantrip, and does it require concentration?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20you%20ready%20a%20cantrip%2C%20and%20does%20it%20require%20concentration%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.准备.848683b5be"
+    ],
+    "expected_terms": [
+      "准备",
+      "施法",
+      "专注",
+      "戏法"
+    ],
+    "expected_primary_terms": [
+      "准备",
+      "专注"
+    ],
+    "reference_answer": "可以准备戏法；只要用准备动作准备的是法术，就要按准备法术的规则维持专注直到释放。",
+    "must_include": [
+      "准备",
+      "专注"
+    ],
+    "must_not_include": [
+      "戏法不能准备"
+    ],
+    "difficulty": "medium",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-ready-bonus-action-spell",
+    "question_zh": "如果我这回合已经用附赠动作施法，还能用动作准备另一个法术吗？",
+    "question_original": "Can I cast a bonus-action spell and use my action to ready another spell?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20I%20cast%20a%20bonus-action%20spell%20and%20use%20my%20action%20to%20ready%20another%20spell%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.施法.dbb9f59e50",
+      "actions.phb.准备.848683b5be"
+    ],
+    "expected_terms": [
+      "附赠动作",
+      "施法",
+      "准备",
+      "戏法"
+    ],
+    "expected_primary_terms": [
+      "附赠动作",
+      "施法"
+    ],
+    "reference_answer": "附赠动作施法会限制同回合其他施法；通常同回合只能再施放施法时间为 1 动作的戏法。准备动作里的施法也要受该限制影响。",
+    "must_include": [
+      "附赠动作",
+      "戏法"
+    ],
+    "must_not_include": [
+      "任意法术都可以"
+    ],
+    "difficulty": "hard",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-blindsight-invisible-disadvantage",
+    "question_zh": "有盲视的生物攻击隐形目标，还会因为看不见而有劣势吗？",
+    "question_original": "Are creatures with blindsight affected by the disadvantage from attacking invisible creatures?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Are%20creatures%20with%20blindsight%20affected%20by%20the%20disadvantage%20from%20attacking%20invisible%20creatures%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": [
+      "盲视",
+      "隐形",
+      "攻击检定",
+      "劣势",
+      "特殊感官"
+    ],
+    "expected_primary_terms": [
+      "盲视",
+      "隐形"
+    ],
+    "reference_answer": "如果盲视让生物在范围内无需视觉也能感知目标，隐形造成的看不见前提通常不成立；具体还要看盲视描述和距离。",
+    "must_include": [
+      "盲视",
+      "隐形"
+    ],
+    "must_not_include": [
+      "必定劣势"
+    ],
+    "difficulty": "hard",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-blindsight-detect-invisible",
+    "question_zh": "盲视能不能发现隐形生物的位置？",
+    "question_original": "Can a creature with blindsight detect an invisible creature?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20a%20creature%20with%20blindsight%20detect%20an%20invisible%20creature%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": [
+      "盲视",
+      "隐形",
+      "特殊感官",
+      "位置"
+    ],
+    "expected_primary_terms": [
+      "盲视",
+      "隐形"
+    ],
+    "reference_answer": "通常可以在盲视范围内感知隐形生物，但不等于看见视觉细节；仍应按具体感官描述裁定。",
+    "must_include": [
+      "盲视",
+      "隐形"
+    ],
+    "must_not_include": [
+      "完全不能发现"
+    ],
+    "difficulty": "medium",
+    "question_type": "ruling",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-silence-verbal-components",
+    "question_zh": "沉默术范围里，带语言成分的法术是不是完全不能施放？",
+    "question_original": "Can a spell with verbal components be cast inside silence?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20a%20spell%20with%20verbal%20components%20be%20cast%20inside%20silence%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "spells.phb.沉默术.20e54bf2a4"
+    ],
+    "expected_terms": [
+      "沉默术",
+      "声音",
+      "语言成分",
+      "不可能施放"
+    ],
+    "expected_primary_terms": [
+      "沉默术",
+      "语言成分"
+    ],
+    "reference_answer": "在沉默术区域内不能施放需要语言成分的法术，因为区域内无法产生或传入声音。",
+    "must_include": [
+      "语言成分",
+      "不可能"
+    ],
+    "must_not_include": [
+      "可以正常施放"
+    ],
+    "difficulty": "easy",
+    "question_type": "lookup",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-subtle-counterspell",
+    "question_zh": "法术被超魔静默施法处理后，还能被反制法术反制吗？",
+    "question_original": "Can you counterspell a spell cast with Subtle Spell?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20you%20counterspell%20a%20spell%20cast%20with%20Subtle%20Spell%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "spells.phb.反制法术.98e1772f51"
+    ],
+    "expected_terms": [
+      "反制法术",
+      "施展法术",
+      "法术构材",
+      "反应"
+    ],
+    "expected_primary_terms": [
+      "反制法术",
+      "施展法术"
+    ],
+    "reference_answer": "反制法术要求你看见一个生物正在施法；若静默施法移除了可感知构材，是否能看见施法取决于该法术是否仍有可感知表现。",
+    "must_include": [
+      "反制法术",
+      "看见"
+    ],
+    "must_not_include": [
+      "必定能反制"
+    ],
+    "difficulty": "hard",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-magic-item-counterspell",
+    "question_zh": "用魔法物品施法能被反制法术吗？",
+    "question_original": "Can a spell cast from a magic item be counterspelled?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20a%20spell%20cast%20from%20a%20magic%20item%20be%20counterspelled%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "spells.phb.反制法术.98e1772f51",
+      "actions.dmg.激活物品.55c7e285c4"
+    ],
+    "expected_terms": [
+      "反制法术",
+      "激活物品",
+      "施展法术",
+      "构材"
+    ],
+    "expected_primary_terms": [
+      "反制法术",
+      "激活物品"
+    ],
+    "reference_answer": "如果魔法物品说明使用者是在施展一个法术，并且施法过程可被感知，通常可能被反制；若只是激活物品产生效果，则不一定是施法。",
+    "must_include": [
+      "施展法术",
+      "激活物品"
+    ],
+    "must_not_include": [
+      "所有魔法物品都能反制"
+    ],
+    "difficulty": "hard",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-grapple-shove-prone",
+    "question_zh": "能不能先擒抱再推倒伏地，让目标站不起来？",
+    "question_original": "Can you grapple and shove a creature prone to keep it down?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Can%20you%20grapple%20and%20shove%20a%20creature%20prone%20to%20keep%20it%20down%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.擒抱.00e4b5d13e",
+      "actions.phb.推撞.328e9c3e11"
+    ],
+    "expected_terms": [
+      "擒抱",
+      "推撞",
+      "伏地",
+      "速度"
+    ],
+    "expected_primary_terms": [
+      "擒抱",
+      "伏地"
+    ],
+    "reference_answer": "可以组合擒抱和推撞伏地；擒抱使目标速度为 0，因此它不能用移动站起，除非先摆脱擒抱或获得其他移动方式。",
+    "must_include": [
+      "擒抱",
+      "伏地",
+      "速度"
+    ],
+    "must_not_include": [
+      "自动无力"
+    ],
+    "difficulty": "medium",
+    "question_type": "ruling",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-shove-out-of-grapple",
+    "question_zh": "把擒抱者推开，能不能解除擒抱？",
+    "question_original": "Does shoving a grappler away end the grapple?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Does%20shoving%20a%20grappler%20away%20end%20the%20grapple%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.擒抱.00e4b5d13e",
+      "actions.phb.推撞.328e9c3e11"
+    ],
+    "expected_terms": [
+      "擒抱",
+      "推撞",
+      "触及范围",
+      "结束"
+    ],
+    "expected_primary_terms": [
+      "擒抱",
+      "推撞"
+    ],
+    "reference_answer": "若推撞导致擒抱者和目标不再处于擒抱所需的触及范围，擒抱通常会结束。",
+    "must_include": [
+      "触及范围"
+    ],
+    "must_not_include": [
+      "无论距离都保持擒抱"
+    ],
+    "difficulty": "medium",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-prone-ranged-attack",
+    "question_zh": "攻击伏地目标时，远程攻击为什么经常反而有劣势？",
+    "question_original": "How does attacking a prone creature work for ranged attacks?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=How%20does%20attacking%20a%20prone%20creature%20work%20for%20ranged%20attacks%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [],
+    "expected_terms": [
+      "伏地",
+      "攻击检定",
+      "优势",
+      "劣势",
+      "5尺"
+    ],
+    "expected_primary_terms": [
+      "伏地",
+      "劣势"
+    ],
+    "reference_answer": "对伏地生物的攻击若攻击者在 5 尺内有优势；否则该攻击检定有劣势，所以远程攻击通常会吃劣势。",
+    "must_include": [
+      "5尺",
+      "劣势"
+    ],
+    "must_not_include": [
+      "远程一定优势"
+    ],
+    "difficulty": "easy",
+    "question_type": "lookup",
+    "source_status": "candidate_unverified"
+  },
+  {
+    "id": "community-rpgse-bonus-action-spell-order",
+    "question_zh": "附赠动作施法的限制和施法顺序有关吗？",
+    "question_original": "Does the bonus-action spellcasting rule depend on the order of spells?",
+    "source_language": "en",
+    "provenance": "community_en_real",
+    "community_source": "RPG StackExchange",
+    "source_url": "https://rpg.stackexchange.com/search?q=Does%20the%20bonus-action%20spellcasting%20rule%20depend%20on%20the%20order%20of%20spells%3F%20rpg.stackexchange",
+    "scope": "core",
+    "expected_documents": [
+      "actions.phb.施法.dbb9f59e50"
+    ],
+    "expected_terms": [
+      "附赠动作",
+      "施法",
+      "戏法",
+      "动作"
+    ],
+    "expected_primary_terms": [
+      "附赠动作",
+      "施法"
+    ],
+    "reference_answer": "规则看的是同一回合是否以附赠动作施法，而不是先后顺序；该回合其他法术通常只能是施法时间为 1 动作的戏法。",
+    "must_include": [
+      "附赠动作",
+      "戏法"
+    ],
+    "must_not_include": [
+      "先施动作法术就可以绕过"
+    ],
+    "difficulty": "medium",
+    "question_type": "edge_case",
+    "source_status": "candidate_unverified"
+  }
+]

@@ -294,6 +294,36 @@ class EvalTests(unittest.TestCase):
             categories.add(question["question_type"])
         self.assertGreaterEqual(len(categories), 4)
 
+    def test_community_real_seed_has_sources_and_reference_answers(self):
+        questions = json.loads(Path("eval/community_real_seed.json").read_text(encoding="utf-8"))
+
+        self.assertGreaterEqual(len(questions), 10)
+        required_fields = {
+            "id",
+            "question_zh",
+            "question_original",
+            "source_language",
+            "provenance",
+            "community_source",
+            "source_url",
+            "source_status",
+            "scope",
+            "expected_terms",
+            "expected_primary_terms",
+            "reference_answer",
+            "must_include",
+            "must_not_include",
+            "difficulty",
+            "question_type",
+        }
+        for question in questions:
+            self.assertTrue(required_fields.issubset(question), question.get("id"))
+            self.assertEqual(question["provenance"], "community_en_real", question["id"])
+            self.assertTrue(question["source_url"].startswith("https://"), question["id"])
+            self.assertIn(question["source_status"], {"candidate_unverified", "verified"}, question["id"])
+            self.assertTrue(question["reference_answer"], question["id"])
+            self.assertTrue(question["expected_terms"], question["id"])
+
 
 if __name__ == "__main__":
     unittest.main()
